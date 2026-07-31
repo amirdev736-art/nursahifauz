@@ -109,8 +109,35 @@ export const checkSubscription = createServerFn({ method: "POST" })
         missing.push(ch);
       }
     }
-    return { subscribed: missing.length === 0, missing };
+    const subscribed = missing.length === 0;
+    await db
+      .from("profiles")
+      .update({ subscribed, subscribed_at: subscribed ? new Date().toISOString() : null })
+      .eq("telegram_id", user.id);
+    await db.from("events").insert({
+      telegram_id: user.id,
+      type: subscribed ? "sub_ok" : "sub_missing",
+      target: missing.map((m) => m.username).join(",") || null,
+    });
+    return { subscribed, missing };
   });
+
+export const logEvent = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    Auth.extend({
+      type: z.string().min(2).max(40),
+      target: z.string().max(120).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { parseInitData, admin } = await import("@/lib/nur.server");
+    const user = parseInitData(data.initData);
+    await admin()
+      .from("events")
+      .insert({ telegram_id: user.id, type: data.type, target: data.target ?? null });
+    return { ok: true };
+  });
+
 
 export const setLanguage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Auth.extend({ lang: z.string().min(2).max(5) }).parse(d))
