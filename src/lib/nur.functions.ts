@@ -69,12 +69,6 @@ export const bootstrap = createServerFn({ method: "POST" })
       .eq("active", true)
       .order("sort");
 
-    const { count: adminCount } = await db
-      .from("admins")
-      .select("telegram_id", { count: "exact", head: true });
-    if (!adminCount) {
-      await db.from("admins").insert({ telegram_id: user.id, note: "birinchi foydalanuvchi" });
-    }
     const { data: adminRow } = await db
       .from("admins")
       .select("telegram_id")
@@ -85,7 +79,7 @@ export const bootstrap = createServerFn({ method: "POST" })
       user,
       profile: profile!,
       channels: (channels ?? []) as Channel[],
-      isAdmin: Boolean(adminRow) || !adminCount,
+      isAdmin: Boolean(adminRow),
     };
   });
 
