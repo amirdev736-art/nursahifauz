@@ -4,7 +4,7 @@ import { BookOpenText, Check, ExternalLink, ShieldCheck } from "lucide-react";
 import { Button, Card, Spinner } from "@/components/nur/ui";
 import { useNur } from "@/lib/nur-context";
 import { LANGS, type LangCode } from "@/lib/i18n";
-import { checkSubscription, setLanguage } from "@/lib/nur.functions";
+import { checkSubscription, setLanguage, logEvent } from "@/lib/nur.functions";
 import { openLink, haptic } from "@/lib/telegram";
 
 export function Gate({ children }: { children: React.ReactNode }) {
