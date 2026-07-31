@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          telegram_id: number
+          used: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          telegram_id: number
+          used?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          telegram_id?: number
+          used?: boolean
+        }
+        Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          telegram_id: number
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          telegram_id: number
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          telegram_id?: number
+          token?: string
+        }
+        Relationships: []
+      }
       admins: {
         Row: {
           created_at: string
@@ -110,6 +155,33 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          created_at: string
+          id: string
+          meta: Json | null
+          target: string | null
+          telegram_id: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          target?: string | null
+          telegram_id: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          target?: string | null
+          telegram_id?: number
+          type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -117,6 +189,8 @@ export type Database = {
           lang: string
           last_active: string | null
           streak_days: number
+          subscribed: boolean
+          subscribed_at: string | null
           telegram_id: number
           username: string | null
         }
@@ -126,6 +200,8 @@ export type Database = {
           lang?: string
           last_active?: string | null
           streak_days?: number
+          subscribed?: boolean
+          subscribed_at?: string | null
           telegram_id: number
           username?: string | null
         }
@@ -135,6 +211,8 @@ export type Database = {
           lang?: string
           last_active?: string | null
           streak_days?: number
+          subscribed?: boolean
+          subscribed_at?: string | null
           telegram_id?: number
           username?: string | null
         }
