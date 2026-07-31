@@ -154,12 +154,36 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               reply_markup: openMarkup(appUrl),
             });
           }
+        } else if (text.startsWith("/admin")) {
+          const client = await db();
+          const { data: isAdmin } = await client
+            .from("admins")
+            .select("telegram_id")
+            .eq("telegram_id", userId ?? 0)
+            .maybeSingle();
+          if (!isAdmin) {
+            await tg("sendMessage", { chat_id: chatId, text: "⛔️ Siz admin emassiz." });
+          } else {
+            const code = String(Math.floor(100000 + Math.random() * 900000));
+            await client.from("admin_codes").insert({
+              code,
+              telegram_id: userId,
+              expires_at: new Date(Date.now() + 10 * 60000).toISOString(),
+            });
+            const site = (appUrl || "").replace(/\/+$/, "");
+            await tg("sendMessage", {
+              chat_id: chatId,
+              parse_mode: "HTML",
+              text: `🔐 Admin panel (sayt versiyasi)\n\n${site}/admin\n\nKirish kodi: <code>${code}</code>\n(10 daqiqa amal qiladi)`,
+            });
+          }
         } else if (text.startsWith("/help")) {
           await tg("sendMessage", {
             chat_id: chatId,
-            text: "Buyruqlar:\n/start — ilovani ochish\n/help — yordam",
+            text: "Buyruqlar:\n/start — ilovani ochish\n/help — yordam\n/admin — admin panel kodi (faqat adminlar)",
           });
         }
+
 
         return Response.json({ ok: true });
       },
