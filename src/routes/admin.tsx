@@ -136,8 +136,6 @@ function AdminGate() {
 
 type Auth = { initData?: string; token?: string };
 
-const PIE = ["hsl(var(--chart-1, 25 95% 53%))", "hsl(var(--muted-foreground))"];
-
 function AdminPanel({ auth, onLogout }: { auth: Auth; onLogout?: () => void }) {
   const { tr } = useNur();
   const [username, setUsername] = useState("");

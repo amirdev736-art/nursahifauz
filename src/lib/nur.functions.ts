@@ -153,8 +153,9 @@ export const ocrImage = createServerFn({ method: "POST" })
     Auth.extend({ image: z.string().min(50).max(12_000_000) }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { parseInitData, aiChat } = await import("@/lib/nur.server");
-    parseInitData(data.initData);
+    const { parseInitData, aiChat, admin } = await import("@/lib/nur.server");
+    const scanUser = parseInitData(data.initData);
+    await admin().from("events").insert({ telegram_id: scanUser.id, type: "scan" });
     const raw = await aiChat([
       {
         role: "user",
@@ -227,6 +228,7 @@ export const addCard = createServerFn({ method: "POST" })
       if (error.code === "23505") return { duplicate: true, card: null };
       throw new Error(error.message);
     }
+    await db.from("events").insert({ telegram_id: user.id, type: "word_add", target: data.word });
     return { duplicate: false, card: row as CardRow };
   });
 
@@ -268,6 +270,7 @@ export const reviewCard = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+    await db.from("events").insert({ telegram_id: user.id, type: "review" });
     return upd as CardRow;
   });
 
