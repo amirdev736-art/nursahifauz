@@ -290,20 +290,49 @@ export const adminAddChannel = createServerFn({ method: "POST" })
         .trim()
         .min(3)
         .max(64)
-        .transform((v) => v.replace(/^@/, "").replace(/^https?:\/\/t\.me\//i, "")),
-      title: z.string().trim().min(1).max(80),
+        .transform((v) =>
+          v
+            .replace(/^https?:\/\/(t\.me|telegram\.me)\//i, "")
+            .replace(/^@/, "")
+            .replace(/\/+$/, ""),
+        ),
+      title: z.string().trim().max(80).optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
     const { db } = await assertAdmin(data.initData);
+    const { tgCall } = await import("@/lib/nur.server");
+
+    if (!/^[A-Za-z][A-Za-z0-9_]{3,63}$/.test(data.username)) {
+      throw new Error(
+        "Kanal username noto'g'ri. Ochiq kanal username kiriting (masalan @nursahifa). Yopiq kanal (t.me/+...) qo'llab-quvvatlanmaydi.",
+      );
+    }
+
+    let chatTitle = data.title?.trim() || "";
+    try {
+      const chat = (await tgCall("getChat", { chat_id: `@${data.username}` })) as {
+        title?: string;
+      };
+      if (!chatTitle) chatTitle = chat?.title ?? data.username;
+    } catch {
+      throw new Error(
+        `Bot @${data.username} kanaliga kira olmadi. Avval botni shu kanalga admin qilib qo'shing, so'ng qayta urinib ko'ring.`,
+      );
+    }
+
     const { error } = await db.from("channels").insert({
       username: data.username,
-      title: data.title,
+      title: chatTitle,
       url: `https://t.me/${data.username}`,
     });
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    if (error) {
+      if (error.code === "23505") throw new Error("Bu kanal allaqachon qo'shilgan");
+      throw new Error(error.message);
+    }
+    return { ok: true, title: chatTitle };
   });
+
 
 export const adminToggleChannel = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
