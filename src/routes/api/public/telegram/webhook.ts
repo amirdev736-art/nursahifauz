@@ -34,18 +34,22 @@ async function tg(method: string, body: Record<string, unknown>) {
 
 type Channel = { id: string; username: string; title: string; url: string };
 
-async function activeChannels(): Promise<Channel[]> {
+async function db() {
   const { createClient } = await import("@supabase/supabase-js");
-  const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data } = await db
+}
+
+async function activeChannels(): Promise<Channel[]> {
+  const { data } = await (await db())
     .from("channels")
     .select("id, username, title, url")
     .eq("active", true)
     .order("sort");
   return (data ?? []) as Channel[];
 }
+
 
 async function missingChannels(userId: number): Promise<Channel[]> {
   const channels = await activeChannels();
