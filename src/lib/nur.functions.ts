@@ -69,6 +69,8 @@ export const bootstrap = createServerFn({ method: "POST" })
       .eq("active", true)
       .order("sort");
 
+    await db.from("events").insert({ telegram_id: user.id, type: "open_app" });
+
     const { data: adminRow } = await db
       .from("admins")
       .select("telegram_id")
