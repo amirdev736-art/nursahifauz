@@ -1,24 +1,84 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { Camera, Layers, Target, User } from "lucide-react";
+import { NurProvider, useNur } from "@/lib/nur-context";
+import { Gate } from "@/components/nur/Gate";
+import { ScanTab } from "@/components/nur/ScanTab";
+import { CardsTab } from "@/components/nur/CardsTab";
+import { QuizTab } from "@/components/nur/QuizTab";
+import { ProfileTab } from "@/components/nur/ProfileTab";
+import { cn } from "@/lib/utils";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Nur Sahifa — kitobdan so'z yodlash ilovasi" },
+      {
+        name: "description",
+        content:
+          "Kitob sahifasini suratga oling, so'zlarni tarjima qiling va interval takrorlash orqali yodlang. Telegram Mini App.",
+      },
+      { property: "og:title", content: "Nur Sahifa — kitobdan so'z yodlash" },
+      {
+        property: "og:description",
+        content: "Rasmdan matn, kartochkalar, aqlli takrorlash va testlar — bitta Mini App'da.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <NurProvider>
+      <main className="mx-auto min-h-screen w-full max-w-md px-4 pt-4 pb-28">
+        <Gate>
+          <Tabs />
+        </Gate>
+      </main>
+    </NurProvider>
+  );
+}
+
+type TabKey = "scan" | "cards" | "quiz" | "profile";
+
+function Tabs() {
+  const { tr } = useNur();
+  const [tab, setTab] = useState<TabKey>("scan");
+
+  const items = [
+    { key: "scan" as const, icon: Camera, label: tr("scan") },
+    { key: "cards" as const, icon: Layers, label: tr("cards") },
+    { key: "quiz" as const, icon: Target, label: tr("quiz") },
+    { key: "profile" as const, icon: User, label: tr("profile") },
+  ];
+
+  return (
+    <>
+      {tab === "scan" && <ScanTab />}
+      {tab === "cards" && <CardsTab />}
+      {tab === "quiz" && <QuizTab />}
+      {tab === "profile" && <ProfileTab />}
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+        <div className="mx-auto grid max-w-md grid-cols-4">
+          {items.map((it) => (
+            <button
+              key={it.key}
+              onClick={() => setTab(it.key)}
+              className={cn(
+                "flex flex-col items-center gap-1 py-2.5 transition-colors",
+                tab === it.key ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <it.icon className={cn("h-5 w-5", tab === it.key && "scale-110")} />
+              <span className="text-[10px] font-semibold">{it.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }
