@@ -14,7 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admins: {
+        Row: {
+          created_at: string
+          note: string | null
+          telegram_id: number
+        }
+        Insert: {
+          created_at?: string
+          note?: string | null
+          telegram_id: number
+        }
+        Update: {
+          created_at?: string
+          note?: string | null
+          telegram_id?: number
+        }
+        Relationships: []
+      }
+      cards: {
+        Row: {
+          box: number
+          created_at: string
+          due_at: string
+          example: string | null
+          id: string
+          learned: boolean
+          reviews: number
+          source_lang: string
+          streak: number
+          target_lang: string
+          telegram_id: number
+          translation: string
+          word: string
+        }
+        Insert: {
+          box?: number
+          created_at?: string
+          due_at?: string
+          example?: string | null
+          id?: string
+          learned?: boolean
+          reviews?: number
+          source_lang?: string
+          streak?: number
+          target_lang?: string
+          telegram_id: number
+          translation: string
+          word: string
+        }
+        Update: {
+          box?: number
+          created_at?: string
+          due_at?: string
+          example?: string | null
+          id?: string
+          learned?: boolean
+          reviews?: number
+          source_lang?: string
+          streak?: number
+          target_lang?: string
+          telegram_id?: number
+          translation?: string
+          word?: string
+        }
+        Relationships: []
+      }
+      channels: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          sort: number
+          title: string
+          url: string
+          username: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          sort?: number
+          title: string
+          url: string
+          username: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          sort?: number
+          title?: string
+          url?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          lang: string
+          last_active: string | null
+          streak_days: number
+          telegram_id: number
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          lang?: string
+          last_active?: string | null
+          streak_days?: number
+          telegram_id: number
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          lang?: string
+          last_active?: string | null
+          streak_days?: number
+          telegram_id?: number
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
