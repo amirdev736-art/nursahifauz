@@ -43,8 +43,6 @@ function AdminPanel() {
     queryFn: () => adminOverview({ data: { initData } }),
   });
 
-  if (!ready || overview.isLoading) return <Spinner />;
-
   if (overview.error) {
     return (
       <Card className="mt-16 py-10 text-center">
@@ -54,7 +52,8 @@ function AdminPanel() {
     );
   }
 
-  const data = overview.data!;
+  const data = overview.data;
+  if (!data) return <Spinner />;
 
   async function run(fn: () => Promise<unknown>) {
     try {
