@@ -69,6 +69,8 @@ export const bootstrap = createServerFn({ method: "POST" })
       .eq("active", true)
       .order("sort");
 
+    await db.from("events").insert({ telegram_id: user.id, type: "open_app" });
+
     const { data: adminRow } = await db
       .from("admins")
       .select("telegram_id")
@@ -109,8 +111,35 @@ export const checkSubscription = createServerFn({ method: "POST" })
         missing.push(ch);
       }
     }
-    return { subscribed: missing.length === 0, missing };
+    const subscribed = missing.length === 0;
+    await db
+      .from("profiles")
+      .update({ subscribed, subscribed_at: subscribed ? new Date().toISOString() : null })
+      .eq("telegram_id", user.id);
+    await db.from("events").insert({
+      telegram_id: user.id,
+      type: subscribed ? "sub_ok" : "sub_missing",
+      target: missing.map((m) => m.username).join(",") || null,
+    });
+    return { subscribed, missing };
   });
+
+export const logEvent = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    Auth.extend({
+      type: z.string().min(2).max(40),
+      target: z.string().max(120).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { parseInitData, admin } = await import("@/lib/nur.server");
+    const user = parseInitData(data.initData);
+    await admin()
+      .from("events")
+      .insert({ telegram_id: user.id, type: data.type, target: data.target ?? null });
+    return { ok: true };
+  });
+
 
 export const setLanguage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Auth.extend({ lang: z.string().min(2).max(5) }).parse(d))
@@ -126,8 +155,9 @@ export const ocrImage = createServerFn({ method: "POST" })
     Auth.extend({ image: z.string().min(50).max(12_000_000) }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { parseInitData, aiChat } = await import("@/lib/nur.server");
-    parseInitData(data.initData);
+    const { parseInitData, aiChat, admin } = await import("@/lib/nur.server");
+    const scanUser = parseInitData(data.initData);
+    await admin().from("events").insert({ telegram_id: scanUser.id, type: "scan" });
     const raw = await aiChat([
       {
         role: "user",
@@ -200,6 +230,7 @@ export const addCard = createServerFn({ method: "POST" })
       if (error.code === "23505") return { duplicate: true, card: null };
       throw new Error(error.message);
     }
+    await db.from("events").insert({ telegram_id: user.id, type: "word_add", target: data.word });
     return { duplicate: false, card: row as CardRow };
   });
 
@@ -241,6 +272,7 @@ export const reviewCard = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+    await db.from("events").insert({ telegram_id: user.id, type: "review" });
     return upd as CardRow;
   });
 
@@ -253,38 +285,203 @@ export const deleteCard = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function assertAdmin(initData: string) {
+const AdminAuth = z.object({
+  initData: z.string().optional(),
+  token: z.string().optional(),
+});
+
+type AdminAuthInput = { initData?: string; token?: string };
+
+async function assertAdmin(auth: AdminAuthInput) {
   const { parseInitData, admin } = await import("@/lib/nur.server");
-  const user = parseInitData(initData);
   const db = admin();
+  let telegramId: number | null = null;
+
+  if (auth.initData) {
+    telegramId = parseInitData(auth.initData).id;
+  } else if (auth.token) {
+    const { data: sess } = await db
+      .from("admin_sessions")
+      .select("telegram_id, expires_at")
+      .eq("token", auth.token)
+      .maybeSingle();
+    if (!sess || new Date(sess.expires_at).getTime() < Date.now()) {
+      throw new Error("FORBIDDEN: sessiya tugagan, qaytadan kiring");
+    }
+    telegramId = Number(sess.telegram_id);
+  }
+  if (!telegramId) throw new Error("FORBIDDEN: kirish talab qilinadi");
+
   const { data: row } = await db
     .from("admins")
     .select("telegram_id")
-    .eq("telegram_id", user.id)
+    .eq("telegram_id", telegramId)
     .maybeSingle();
   if (!row) throw new Error("FORBIDDEN: admin emassiz");
-  return { user, db };
+  return { telegramId, db };
 }
 
-export const adminOverview = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => Auth.parse(d))
+export const adminLogin = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code: z.string().trim().length(6) }).parse(d))
   .handler(async ({ data }) => {
-    const { db } = await assertAdmin(data.initData);
-    const [{ data: channels }, users, cards] = await Promise.all([
+    const { admin } = await import("@/lib/nur.server");
+    const db = admin();
+    const { data: row } = await db
+      .from("admin_codes")
+      .select("*")
+      .eq("code", data.code)
+      .maybeSingle();
+    if (!row || row.used || new Date(row.expires_at).getTime() < Date.now()) {
+      throw new Error("Kod noto'g'ri yoki muddati tugagan");
+    }
+    const { data: isAdmin } = await db
+      .from("admins")
+      .select("telegram_id")
+      .eq("telegram_id", row.telegram_id)
+      .maybeSingle();
+    if (!isAdmin) throw new Error("Siz admin emassiz");
+
+    await db.from("admin_codes").update({ used: true }).eq("code", data.code);
+    const token = crypto.randomUUID() + "." + crypto.randomUUID();
+    await db.from("admin_sessions").insert({
+      token,
+      telegram_id: row.telegram_id,
+      expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+    });
+    return { token };
+  });
+
+type DayPoint = { day: string; users: number; events: number };
+
+export const adminOverview = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => AdminAuth.parse(d))
+  .handler(async ({ data }) => {
+    const { db } = await assertAdmin(data);
+    const since = new Date(Date.now() - 29 * 86400000).toISOString();
+
+    const [channelsRes, profilesRes, cardsRes, eventsRes] = await Promise.all([
       db.from("channels").select("*").order("sort"),
-      db.from("profiles").select("telegram_id", { count: "exact", head: true }),
+      db
+        .from("profiles")
+        .select("telegram_id, first_name, username, lang, subscribed, created_at, last_active")
+        .order("created_at", { ascending: false })
+        .limit(2000),
       db.from("cards").select("id", { count: "exact", head: true }),
+      db
+        .from("events")
+        .select("telegram_id, type, target, created_at")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(5000),
     ]);
+
+    const profiles = profilesRes.data ?? [];
+    const events = eventsRes.data ?? [];
+    const dayKey = (iso: string) => iso.slice(0, 10);
+
+    const days: DayPoint[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      days.push({ day: d, users: 0, events: 0 });
+    }
+    const idx = new Map(days.map((d, i) => [d.day, i]));
+    for (const p of profiles) {
+      const i = idx.get(dayKey(p.created_at as string));
+      if (i !== undefined) days[i].users += 1;
+    }
+    for (const e of events) {
+      const i = idx.get(dayKey(e.created_at as string));
+      if (i !== undefined) days[i].events += 1;
+    }
+
+    const last7 = days.slice(-7).reduce((s, d) => s + d.users, 0);
+    const prev7 = days.slice(-14, -7).reduce((s, d) => s + d.users, 0);
+    const growthPct = prev7 === 0 ? (last7 > 0 ? 100 : 0) : Math.round(((last7 - prev7) / prev7) * 100);
+
+    const eventCounts = Object.entries(
+      events.reduce<Record<string, number>>((acc, e) => {
+        acc[e.type as string] = (acc[e.type as string] ?? 0) + 1;
+        return acc;
+      }, {}),
+    )
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const channelClicks = Object.entries(
+      events
+        .filter((e) => e.type === "channel_click")
+        .reduce<Record<string, number>>((acc, e) => {
+          const k = (e.target as string) || "—";
+          acc[k] = (acc[k] ?? 0) + 1;
+          return acc;
+        }, {}),
+    )
+      .map(([username, clicks]) => ({ username, clicks }))
+      .sort((a, b) => b.clicks - a.clicks);
+
+    const nameById = new Map(
+      profiles.map((p) => [
+        Number(p.telegram_id),
+        { first_name: p.first_name as string | null, username: p.username as string | null },
+      ]),
+    );
+
+    const perUser = events.reduce<Record<string, number>>((acc, e) => {
+      const k = String(e.telegram_id);
+      acc[k] = (acc[k] ?? 0) + 1;
+      return acc;
+    }, {});
+    const topUsers = Object.entries(perUser)
+      .map(([id, actions]) => ({
+        telegram_id: Number(id),
+        actions,
+        first_name: nameById.get(Number(id))?.first_name ?? null,
+        username: nameById.get(Number(id))?.username ?? null,
+      }))
+      .sort((a, b) => b.actions - a.actions)
+      .slice(0, 20);
+
+    const recentEvents = events.slice(0, 40).map((e) => ({
+      telegram_id: Number(e.telegram_id),
+      type: e.type as string,
+      target: (e.target as string) ?? null,
+      created_at: e.created_at as string,
+      username: nameById.get(Number(e.telegram_id))?.username ?? null,
+      first_name: nameById.get(Number(e.telegram_id))?.first_name ?? null,
+    }));
+
+    const subscribed = profiles.filter((p) => p.subscribed).length;
+    const today = new Date().toISOString().slice(0, 10);
+
     return {
-      channels: channels ?? [],
-      users: users.count ?? 0,
-      cards: cards.count ?? 0,
+      channels: channelsRes.data ?? [],
+      users: profiles.length,
+      cards: cardsRes.count ?? 0,
+      subscribed,
+      unsubscribed: profiles.length - subscribed,
+      activeToday: profiles.filter((p) => p.last_active === today).length,
+      last7,
+      prev7,
+      growthPct,
+      days,
+      eventCounts,
+      channelClicks,
+      topUsers,
+      recentEvents,
+      recentUsers: profiles.slice(0, 20).map((p) => ({
+        telegram_id: Number(p.telegram_id),
+        first_name: p.first_name as string | null,
+        username: p.username as string | null,
+        lang: p.lang as string,
+        subscribed: Boolean(p.subscribed),
+        created_at: p.created_at as string,
+      })),
     };
   });
 
 export const adminAddChannel = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    Auth.extend({
+    AdminAuth.extend({
       username: z
         .string()
         .trim()
@@ -300,7 +497,7 @@ export const adminAddChannel = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { db } = await assertAdmin(data.initData);
+    const { db } = await assertAdmin(data);
     const { tgCall } = await import("@/lib/nur.server");
 
     if (!/^[A-Za-z][A-Za-z0-9_]{3,63}$/.test(data.username)) {
@@ -333,21 +530,21 @@ export const adminAddChannel = createServerFn({ method: "POST" })
     return { ok: true, title: chatTitle };
   });
 
-
 export const adminToggleChannel = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    Auth.extend({ id: z.string().uuid(), active: z.boolean() }).parse(d),
+    AdminAuth.extend({ id: z.string().uuid(), active: z.boolean() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { db } = await assertAdmin(data.initData);
+    const { db } = await assertAdmin(data);
     await db.from("channels").update({ active: data.active }).eq("id", data.id);
     return { ok: true };
   });
 
 export const adminDeleteChannel = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => Auth.extend({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => AdminAuth.extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const { db } = await assertAdmin(data.initData);
+    const { db } = await assertAdmin(data);
     await db.from("channels").delete().eq("id", data.id);
     return { ok: true };
   });
+
