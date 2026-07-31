@@ -93,17 +93,21 @@ function AdminPanel() {
           className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-[15px] outline-none focus:border-primary"
         />
         <Button
-          disabled={!username.trim() || !title.trim()}
+          disabled={!username.trim()}
           onClick={() =>
             run(async () => {
-              await adminAddChannel({ data: { initData, username, title } });
+              await adminAddChannel({
+                data: { initData, username, title: title.trim() || undefined },
+              });
               setUsername("");
               setTitle("");
+              toast.success("Kanal qo'shildi");
             })
           }
         >
           <Plus className="h-4 w-4" /> {tr("save")}
         </Button>
+
       </Card>
 
       <SectionTitle>{tr("adminChannels")}</SectionTitle>
