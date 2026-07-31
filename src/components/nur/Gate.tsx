@@ -88,7 +88,10 @@ export function Gate({ children }: { children: React.ReactNode }) {
           {sub.data.missing.map((ch) => (
             <button
               key={ch.id}
-              onClick={() => openLink(ch.url)}
+              onClick={() => {
+                void logEvent({ data: { initData, type: "channel_click", target: ch.username } });
+                openLink(ch.url);
+              }}
               className="ios-card flex w-full items-center gap-3 p-4 text-left active:scale-[0.98]"
             >
               <div className="grad-warm grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-sm font-bold text-primary-foreground">
