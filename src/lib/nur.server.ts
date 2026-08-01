@@ -68,25 +68,42 @@ export async function aiChat(
   messages: unknown[],
   model = "openai/gpt-5.6-sol",
 ): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("AI sozlanmagan");
-  const res = await fetch(AI_URL, {
-    method: "POST",
-    headers: { "Lovable-API-Key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, reasoning_effort: "none" }),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    if (res.status === 429) throw new Error("RATE_LIMIT");
+  const key = (process.env.LOVABLE_API_KEY ?? "").trim();
+  if (!key) throw new Error("AI sozlanmagan (LOVABLE_API_KEY yo'q)");
+
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(AI_URL, {
+      method: "POST",
+      headers: { "Lovable-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, messages, reasoning_effort: "none" }),
+    });
+    const text = await res.text();
+
+    if (res.ok) {
+      const json = JSON.parse(text) as { choices?: { message?: { content?: string } }[] };
+      return json.choices?.[0]?.message?.content ?? "";
+    }
+
     if (res.status === 402) throw new Error("NO_CREDITS");
+    if (res.status === 429 || res.status >= 500) {
+      lastErr = res.status === 429 ? "RATE_LIMIT" : `AI xatosi [${res.status}]`;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(lastErr);
+    }
     if (res.status === 401 || res.status === 403) {
-      throw new Error("AI ulanishiga ruxsat berilmadi. Iltimos, birozdan so‘ng qayta urinib ko‘ring.");
+      throw new Error(
+        "AI ulanishiga ruxsat berilmadi. Ilova yangi kalit bilan qayta nashr (Publish) qilinishi kerak.",
+      );
     }
     throw new Error(`AI xatosi [${res.status}]: ${text.slice(0, 300)}`);
   }
-  const json = JSON.parse(text) as { choices?: { message?: { content?: string } }[] };
-  return json.choices?.[0]?.message?.content ?? "";
+  throw new Error(lastErr || "AI xatosi");
 }
+
 
 export function extractJson<T>(raw: string): T {
   const cleaned = raw.replace(/```json/gi, "```").split("```").join("").trim();
