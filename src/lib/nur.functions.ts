@@ -63,6 +63,18 @@ export const bootstrap = createServerFn({ method: "POST" })
       }
     }
 
+    const { applyDailyCredits, rewardReferral } = await import("@/lib/nur.server");
+    profile = (await applyDailyCredits(db, profile as never)) as never;
+    if (profile!.subscribed) {
+      await rewardReferral(db, user.id);
+      const { data: fresh } = await db
+        .from("profiles")
+        .select("*")
+        .eq("telegram_id", user.id)
+        .maybeSingle();
+      if (fresh) profile = fresh;
+    }
+
     const { data: channels } = await db
       .from("channels")
       .select("id, username, title, url")
@@ -71,17 +83,36 @@ export const bootstrap = createServerFn({ method: "POST" })
 
     await db.from("events").insert({ telegram_id: user.id, type: "open_app" });
 
+    const { count: invitedCount } = await db
+      .from("referrals")
+      .select("id", { count: "exact", head: true })
+      .eq("referrer_id", user.id)
+      .eq("rewarded", true);
+
     const { data: adminRow } = await db
       .from("admins")
       .select("telegram_id")
       .eq("telegram_id", user.id)
       .maybeSingle();
 
+    const { planOf } = await import("@/lib/plans");
+    const plan = planOf(profile!.tier);
+
     return {
       user,
       profile: profile!,
       channels: (channels ?? []) as Channel[],
       isAdmin: Boolean(adminRow),
+      billing: {
+        tier: profile!.tier as string,
+        credits: profile!.credits as number,
+        scansToday: profile!.scans_today as number,
+        scanCap: plan.scanCap,
+        bonusScans: profile!.bonus_scans as number,
+        daily: plan.daily,
+        refCode: (profile!.ref_code as string | null) ?? `r${user.id}`,
+        invited: invitedCount ?? 0,
+      },
     };
   });
 
@@ -116,6 +147,10 @@ export const checkSubscription = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ subscribed, subscribed_at: subscribed ? new Date().toISOString() : null })
       .eq("telegram_id", user.id);
+    if (subscribed) {
+      const { rewardReferral } = await import("@/lib/nur.server");
+      await rewardReferral(db, user.id);
+    }
     await db.from("events").insert({
       telegram_id: user.id,
       type: subscribed ? "sub_ok" : "sub_missing",
@@ -155,9 +190,35 @@ export const ocrImage = createServerFn({ method: "POST" })
     Auth.extend({ image: z.string().min(50).max(12_000_000) }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { parseInitData, aiChat, admin } = await import("@/lib/nur.server");
+    const { parseInitData, aiChat, admin, applyDailyCredits } = await import("@/lib/nur.server");
+    const { planOf, SCAN_COST } = await import("@/lib/plans");
     const scanUser = parseInitData(data.initData);
-    await admin().from("events").insert({ telegram_id: scanUser.id, type: "scan" });
+    const db = admin();
+
+    const { data: prof } = await db
+      .from("profiles")
+      .select("*")
+      .eq("telegram_id", scanUser.id)
+      .maybeSingle();
+    if (!prof) throw new Error("Profil topilmadi");
+    const profile = await applyDailyCredits(db, prof as never);
+    const plan = planOf(profile.tier);
+
+    const withinCap = profile.scans_today < plan.scanCap;
+    const useBonus = !withinCap && profile.bonus_scans > 0;
+    if (!withinCap && !useBonus) throw new Error("LIMIT_SCAN");
+    if (profile.credits < SCAN_COST) throw new Error("LIMIT_CREDIT");
+
+    await db
+      .from("profiles")
+      .update({
+        credits: profile.credits - SCAN_COST,
+        scans_today: profile.scans_today + 1,
+        bonus_scans: useBonus ? profile.bonus_scans - 1 : profile.bonus_scans,
+      })
+      .eq("telegram_id", scanUser.id);
+
+    await db.from("events").insert({ telegram_id: scanUser.id, type: "scan" });
     const raw = await aiChat([
       {
         role: "user",
@@ -548,3 +609,46 @@ export const adminDeleteChannel = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+export const adminSetTier = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    AdminAuth.extend({
+      telegram_id: z.coerce.number().int().positive(),
+      tier: z.enum(["free", "standart", "premium", "vip"]),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db, telegramId } = await assertAdmin(data);
+    const { planOf } = await import("@/lib/plans");
+    const { error } = await db
+      .from("profiles")
+      .update({ tier: data.tier })
+      .eq("telegram_id", data.telegram_id);
+    if (error) throw new Error(error.message);
+    await db.from("events").insert({
+      telegram_id: telegramId,
+      type: "tier_change",
+      target: `${data.telegram_id}:${data.tier}`,
+    });
+    return { ok: true, daily: planOf(data.tier).daily };
+  });
+
+export const adminAddCredits = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    AdminAuth.extend({
+      telegram_id: z.coerce.number().int().positive(),
+      amount: z.coerce.number().int().min(-500).max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db } = await assertAdmin(data);
+    const { data: p } = await db
+      .from("profiles")
+      .select("credits")
+      .eq("telegram_id", data.telegram_id)
+      .maybeSingle();
+    if (!p) throw new Error("Foydalanuvchi topilmadi");
+    const credits = Math.max(0, (p.credits ?? 0) + data.amount);
+    await db.from("profiles").update({ credits }).eq("telegram_id", data.telegram_id);
+    return { ok: true, credits };
+  });
