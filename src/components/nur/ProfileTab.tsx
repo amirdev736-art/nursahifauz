@@ -5,6 +5,7 @@ import { useNur } from "@/lib/nur-context";
 import { LANGS, type LangCode } from "@/lib/i18n";
 import { setLanguage } from "@/lib/nur.functions";
 import { LEARNED_STREAK } from "@/lib/srs";
+import { CreditsBar, PlansList, ReferralCard } from "@/components/nur/Paywall";
 
 export function ProfileTab() {
   const { tr, firstName, streakDays, cards, lang, setLang, initData, isAdmin } = useNur();
@@ -30,6 +31,13 @@ export function ProfileTab() {
         <Stat value={learned} label={tr("learned")} tone="text-success" />
         <Stat value={LEARNED_STREAK} label="SRS" tone="text-accent" />
       </div>
+
+      <SectionTitle>Kreditlar</SectionTitle>
+      <CreditsBar />
+      <ReferralCard />
+
+      <SectionTitle>Obuna darajalari</SectionTitle>
+      <PlansList />
 
       <SectionTitle>{tr("language")}</SectionTitle>
       <div className="ios-card overflow-hidden">

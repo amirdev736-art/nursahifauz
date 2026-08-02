@@ -4,6 +4,7 @@ import { Button, Card, Spinner } from "@/components/nur/ui";
 import { useNur } from "@/lib/nur-context";
 import { addCard, ocrImage, translateWord } from "@/lib/nur.functions";
 import { haptic } from "@/lib/telegram";
+import { CreditsBar, PaywallSheet } from "@/components/nur/Paywall";
 import { toast } from "sonner";
 
 async function compress(file: File): Promise<string> {
@@ -20,7 +21,8 @@ async function compress(file: File): Promise<string> {
 type Picked = { word: string; sentence: string };
 
 export function ScanTab() {
-  const { tr, initData, lang, refreshCards } = useNur();
+  const { tr, initData, lang, refreshCards, refreshBilling } = useNur();
+  const [paywall, setPaywall] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
@@ -40,9 +42,17 @@ export function ScanTab() {
       const dataUrl = await compress(file);
       const res = await ocrImage({ data: { initData, image: dataUrl } });
       setText(res.text);
+      refreshBilling();
       if (!res.text) toast.error(tr("error"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : tr("error"));
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("LIMIT_SCAN")) {
+        setPaywall("Bugungi skanerlar tugadi. Do'st taklif qiling yoki obunani ko'taring.");
+      } else if (msg.includes("LIMIT_CREDIT")) {
+        setPaywall("Kreditlaringiz tugadi. Do'st taklif qiling yoki obunani ko'taring.");
+      } else {
+        toast.error(msg || tr("error"));
+      }
     } finally {
       setBusy(false);
     }
@@ -99,6 +109,8 @@ export function ScanTab() {
         }}
       />
 
+      <CreditsBar />
+
       {!text && !busy && (
         <Card className="flex flex-col items-center gap-4 py-9 text-center">
           <div className="grad-warm grid h-16 w-16 place-items-center rounded-3xl shadow-[var(--shadow-pop)]">
@@ -152,6 +164,8 @@ export function ScanTab() {
           </Card>
         </>
       )}
+
+      {paywall ? <PaywallSheet reason={paywall} onClose={() => setPaywall(null)} /> : null}
 
       {picked && (
         <div
