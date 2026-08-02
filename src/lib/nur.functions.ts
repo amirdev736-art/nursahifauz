@@ -98,6 +98,15 @@ export const bootstrap = createServerFn({ method: "POST" })
     const { planOf } = await import("@/lib/plans");
     const plan = planOf(profile!.tier);
 
+    let botUsername = "";
+    try {
+      const { tgCall } = await import("@/lib/nur.server");
+      const me = (await tgCall("getMe", {})) as { username?: string };
+      botUsername = me?.username ?? "";
+    } catch {
+      botUsername = "";
+    }
+
     return {
       user,
       profile: profile!,
@@ -112,6 +121,7 @@ export const bootstrap = createServerFn({ method: "POST" })
         daily: plan.daily,
         refCode: (profile!.ref_code as string | null) ?? `r${user.id}`,
         invited: invitedCount ?? 0,
+        botUsername,
       },
     };
   });
@@ -424,7 +434,7 @@ export const adminOverview = createServerFn({ method: "POST" })
       db.from("channels").select("*").order("sort"),
       db
         .from("profiles")
-        .select("telegram_id, first_name, username, lang, subscribed, created_at, last_active")
+        .select("telegram_id, first_name, username, lang, subscribed, created_at, last_active, tier, credits, scans_today, bonus_scans")
         .order("created_at", { ascending: false })
         .limit(2000),
       db.from("cards").select("id", { count: "exact", head: true }),
@@ -536,6 +546,8 @@ export const adminOverview = createServerFn({ method: "POST" })
         lang: p.lang as string,
         subscribed: Boolean(p.subscribed),
         created_at: p.created_at as string,
+        tier: (p.tier as string) ?? "free",
+        credits: (p.credits as number) ?? 0,
       })),
     };
   });
