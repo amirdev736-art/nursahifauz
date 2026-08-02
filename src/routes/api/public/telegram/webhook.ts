@@ -140,6 +140,23 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (!chatId) return Response.json({ ok: true });
 
         if (text.startsWith("/start") || text.startsWith("/app")) {
+          const payload = text.split(/\s+/)[1] ?? "";
+          if (userId && /^r\d{3,20}$/.test(payload)) {
+            const referrerId = Number(payload.slice(1));
+            if (referrerId && referrerId !== userId) {
+              const client = await db();
+              const { data: referrer } = await client
+                .from("profiles")
+                .select("telegram_id")
+                .eq("telegram_id", referrerId)
+                .maybeSingle();
+              if (referrer) {
+                await client
+                  .from("referrals")
+                  .insert({ referrer_id: referrerId, invitee_id: userId });
+              }
+            }
+          }
           const missing = userId ? await missingChannels(userId) : [];
           if (missing.length) {
             await tg("sendMessage", {
@@ -150,7 +167,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           } else {
             await tg("sendMessage", {
               chat_id: chatId,
-              text: `Assalomu alaykum${update.message?.from?.first_name ? ", " + update.message.from.first_name : ""}! 📖\n\nNur Sahifa — kitob sahifasini rasmga oling, notanish so'zlarni kartochkaga aylantiring va yodlang.\n\nBoshlash uchun pastdagi tugmani bosing 👇`,
+              text: `Assalomu alaykum${update.message?.from?.first_name ? ", " + update.message.from.first_name : ""}! 📖\n\nNur Sahifa — kitob sahifasini rasmga oling, notanish so'zlarni kartochkaga aylantiring va yodlang.\n\n🎁 Birinchi kun uchun 15 ta kredit sovg'a! Keyingi kunlarda har kuni 5 ta kredit.\n👥 Do'st taklif qiling — har bir do'st uchun sizga ham, do'stingizga ham +1 skaner.\n\nBoshlash uchun pastdagi tugmani bosing 👇`,
               reply_markup: openMarkup(appUrl),
             });
           }
@@ -180,7 +197,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         } else if (text.startsWith("/help")) {
           await tg("sendMessage", {
             chat_id: chatId,
-            text: "Buyruqlar:\n/start — ilovani ochish\n/help — yordam\n/admin — admin panel kodi (faqat adminlar)",
+            text: "Buyruqlar:\n/start — ilovani ochish\n/help — yordam\n/admin — admin panel kodi (faqat adminlar)\n\n💳 Kunlik kreditlar: Oddiy 5 · Standart 10 · Premium 15 · VIP 20.\nDarajani ko'tarish uchun chekni adminga yuboring: @davlatbekdev",
           });
         }
 
