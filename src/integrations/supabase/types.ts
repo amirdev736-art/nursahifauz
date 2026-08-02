@@ -184,37 +184,88 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bonus_scans: number
           created_at: string
+          credits: number
+          credits_date: string | null
           first_name: string | null
           lang: string
           last_active: string | null
+          ref_code: string | null
+          referred_by: number | null
+          scan_day: string | null
+          scans_today: number
           streak_days: number
           subscribed: boolean
           subscribed_at: string | null
           telegram_id: number
+          tier: string
           username: string | null
         }
         Insert: {
+          bonus_scans?: number
           created_at?: string
+          credits?: number
+          credits_date?: string | null
           first_name?: string | null
           lang?: string
           last_active?: string | null
+          ref_code?: string | null
+          referred_by?: number | null
+          scan_day?: string | null
+          scans_today?: number
           streak_days?: number
           subscribed?: boolean
           subscribed_at?: string | null
           telegram_id: number
+          tier?: string
           username?: string | null
         }
         Update: {
+          bonus_scans?: number
           created_at?: string
+          credits?: number
+          credits_date?: string | null
           first_name?: string | null
           lang?: string
           last_active?: string | null
+          ref_code?: string | null
+          referred_by?: number | null
+          scan_day?: string | null
+          scans_today?: number
           streak_days?: number
           subscribed?: boolean
           subscribed_at?: string | null
           telegram_id?: number
+          tier?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          invitee_id: number
+          referrer_id: number
+          rewarded: boolean
+          rewarded_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitee_id: number
+          referrer_id: number
+          rewarded?: boolean
+          rewarded_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitee_id?: number
+          referrer_id?: number
+          rewarded?: boolean
+          rewarded_at?: string | null
         }
         Relationships: []
       }
