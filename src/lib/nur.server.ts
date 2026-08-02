@@ -139,9 +139,10 @@ export async function applyDailyCredits(
   const patch: Record<string, unknown> = {};
 
   if (profile.credits_date !== day) {
-    const grant = profile.credits_date === null ? WELCOME_CREDITS : planOf(profile.tier).daily;
-    patch.credits = (profile.credits ?? 0) + (profile.credits_date === null ? 0 : grant);
-    if (profile.credits_date === null) patch.credits = Math.max(profile.credits ?? 0, grant);
+    patch.credits =
+      profile.credits_date === null
+        ? Math.max(profile.credits ?? 0, WELCOME_CREDITS)
+        : (profile.credits ?? 0) + planOf(profile.tier).daily;
     patch.credits_date = day;
   }
   if (profile.scan_day !== day) {
