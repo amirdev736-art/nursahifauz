@@ -64,8 +64,8 @@ export const bootstrap = createServerFn({ method: "POST" })
     }
 
     const { applyDailyCredits, rewardReferral } = await import("@/lib/nur.server");
-    profile = (await applyDailyCredits(db, profile as never)) as never;
-    if (profile!.subscribed) {
+    profile = (await applyDailyCredits(db, profile as never)) as typeof profile;
+    if (profile?.subscribed) {
       await rewardReferral(db, user.id);
       const { data: fresh } = await db
         .from("profiles")

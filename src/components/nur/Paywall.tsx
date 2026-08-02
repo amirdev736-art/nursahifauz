@@ -54,7 +54,7 @@ export function ReferralCard() {
         <span className="font-bold text-primary">{billing.invited}</span>
       </div>
       <Button
-        variant="secondary"
+        variant="soft"
         disabled={!link}
         onClick={() => {
           haptic("light");

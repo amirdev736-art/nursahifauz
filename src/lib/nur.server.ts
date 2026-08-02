@@ -136,7 +136,7 @@ export async function applyDailyCredits(
   profile: ProfileRow,
 ): Promise<ProfileRow> {
   const day = today();
-  const patch: Record<string, unknown> = {};
+  const patch: Partial<ProfileRow> = {};
 
   if (profile.credits_date !== day) {
     patch.credits =
@@ -155,7 +155,7 @@ export async function applyDailyCredits(
 
   const { data } = await db
     .from("profiles")
-    .update(patch)
+    .update(patch as never)
     .eq("telegram_id", profile.telegram_id)
     .select("*")
     .single();
