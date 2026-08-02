@@ -112,3 +112,85 @@ export function extractJson<T>(raw: string): T {
   if (start === -1 || end === -1) throw new Error("AI javobini o'qib bo'lmadi");
   return JSON.parse(cleaned.slice(start, end + 1)) as T;
 }
+
+/* ---------------- Kredit / referal yordamchilari ---------------- */
+
+import { planOf, WELCOME_CREDITS, REFERRAL_SCANS } from "@/lib/plans";
+
+type ProfileRow = Record<string, unknown> & {
+  telegram_id: number;
+  tier: string;
+  credits: number;
+  credits_date: string | null;
+  scans_today: number;
+  scan_day: string | null;
+  bonus_scans: number;
+  ref_code: string | null;
+};
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Kunlik kreditni beradi (ishlatilmagani saqlanib qoladi) va kunlik skaner hisobini yangilaydi. */
+export async function applyDailyCredits(
+  db: ReturnType<typeof admin>,
+  profile: ProfileRow,
+): Promise<ProfileRow> {
+  const day = today();
+  const patch: Partial<ProfileRow> = {};
+
+  if (profile.credits_date !== day) {
+    patch.credits =
+      profile.credits_date === null
+        ? Math.max(profile.credits ?? 0, WELCOME_CREDITS)
+        : (profile.credits ?? 0) + planOf(profile.tier).daily;
+    patch.credits_date = day;
+  }
+  if (profile.scan_day !== day) {
+    patch.scans_today = 0;
+    patch.scan_day = day;
+  }
+  if (!profile.ref_code) patch.ref_code = `r${profile.telegram_id}`;
+
+  if (Object.keys(patch).length === 0) return profile;
+
+  const { data } = await db
+    .from("profiles")
+    .update(patch as never)
+    .eq("telegram_id", profile.telegram_id)
+    .select("*")
+    .single();
+  return (data ?? { ...profile, ...patch }) as ProfileRow;
+}
+
+/** Do'st majburiy kanallarga obuna bo'lib ilovani ochsa, ikkala tomonga ham 1 tadan skaner beradi. */
+export async function rewardReferral(db: ReturnType<typeof admin>, inviteeId: number) {
+  const { data: ref } = await db
+    .from("referrals")
+    .select("*")
+    .eq("invitee_id", inviteeId)
+    .maybeSingle();
+  if (!ref || ref.rewarded) return;
+
+  await db.from("referrals").update({ rewarded: true, rewarded_at: new Date().toISOString() }).eq("id", ref.id);
+
+  for (const id of [Number(ref.referrer_id), inviteeId]) {
+    const { data: p } = await db
+      .from("profiles")
+      .select("bonus_scans, credits")
+      .eq("telegram_id", id)
+      .maybeSingle();
+    if (!p) continue;
+    await db
+      .from("profiles")
+      .update({
+        bonus_scans: (p.bonus_scans ?? 0) + REFERRAL_SCANS,
+        credits: (p.credits ?? 0) + REFERRAL_SCANS,
+      })
+      .eq("telegram_id", id);
+  }
+  await db.from("events").insert({
+    telegram_id: Number(ref.referrer_id),
+    type: "referral_done",
+    target: String(inviteeId),
+  });
+}

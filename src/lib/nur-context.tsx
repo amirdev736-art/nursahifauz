@@ -17,6 +17,32 @@ type NurCtx = {
   cards: CardRow[];
   cardsLoading: boolean;
   refreshCards: () => void;
+  billing: Billing;
+  refreshBilling: () => void;
+};
+
+export type Billing = {
+  tier: string;
+  credits: number;
+  scansToday: number;
+  scanCap: number;
+  bonusScans: number;
+  daily: number;
+  refCode: string;
+  invited: number;
+  botUsername: string;
+};
+
+const EMPTY_BILLING: Billing = {
+  tier: "free",
+  credits: 0,
+  scansToday: 0,
+  scanCap: 3,
+  bonusScans: 0,
+  daily: 5,
+  refCode: "",
+  invited: 0,
+  botUsername: "",
 };
 
 const Ctx = createContext<NurCtx | null>(null);
@@ -72,6 +98,8 @@ export function NurProvider({ children }: { children: ReactNode }) {
       cards: cards.data ?? [],
       cardsLoading: cards.isLoading,
       refreshCards: () => qc.invalidateQueries({ queryKey: ["cards"] }),
+      billing: boot.data?.billing ?? EMPTY_BILLING,
+      refreshBilling: () => qc.invalidateQueries({ queryKey: ["boot"] }),
     }),
     [initData, mounted, lang, boot.data, cards.data, cards.isLoading, qc],
   );

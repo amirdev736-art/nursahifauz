@@ -34,7 +34,10 @@ import {
   adminLogin,
   adminOverview,
   adminToggleChannel,
+  adminSetTier,
+  adminAddCredits,
 } from "@/lib/nur.functions";
+import { PLAN_LIST } from "@/lib/plans";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -427,13 +430,49 @@ function AdminPanel({ auth, onLogout }: { auth: Auth; onLogout?: () => void }) {
                 · {u.lang}
               </p>
             </div>
-            <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                u.subscribed ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              {u.subscribed ? "obuna" : "yo'q"}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                  u.subscribed ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {u.subscribed ? "obuna" : "yo'q"}
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                {u.credits} kr
+              </span>
+              <select
+                value={u.tier}
+                onChange={(e) =>
+                  run(async () => {
+                    await adminSetTier({
+                      data: { ...auth, telegram_id: u.telegram_id, tier: e.target.value as never },
+                    });
+                    toast.success("Daraja yangilandi");
+                  })
+                }
+                className="rounded-xl border border-border bg-secondary px-2 py-1 text-[11px] font-semibold"
+              >
+                {PLAN_LIST.map((p) => (
+                  <option key={p.tier} value={p.tier}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() =>
+                  run(async () => {
+                    await adminAddCredits({
+                      data: { ...auth, telegram_id: u.telegram_id, amount: 5 },
+                    });
+                    toast.success("+5 kredit");
+                  })
+                }
+                className="rounded-xl bg-secondary px-2 py-1 text-[11px] font-bold"
+              >
+                +5
+              </button>
+            </div>
           </div>
         ))}
       </div>
