@@ -37,7 +37,7 @@ export function QuizTab() {
       <Card className="space-y-3">
         <div className="flex items-center justify-between text-sm font-semibold">
           <span>{tr("cardsCount")}</span>
-          <span className="tabular-nums">
+          <span className="tabular-nums text-accent">
             {cards.length} / {quizUnlocked ? EXAM_MIN : QUIZ_MIN}
           </span>
         </div>
@@ -48,7 +48,7 @@ export function QuizTab() {
       </Card>
 
       <SectionTitle>{tr("quiz")}</SectionTitle>
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {items.map((it) => (
           <button
             key={it.key}
@@ -58,20 +58,43 @@ export function QuizTab() {
               setMode(it.key);
             }}
             className={cn(
-              "ios-card flex w-full items-center gap-3.5 p-4 text-left transition-transform active:scale-[0.98]",
-              !it.unlocked && "opacity-55",
+              "relative flex w-full items-center gap-3.5 overflow-hidden p-4 text-left transition-transform active:scale-[0.98]",
+              it.unlocked ? "glass-panel shadow-[var(--shadow-pop)]" : "ios-card",
             )}
           >
             <div
               className={cn(
                 "grid h-11 w-11 shrink-0 place-items-center rounded-2xl",
-                it.key === "exam" ? "grad-cool" : "grad-warm",
+                it.unlocked
+                  ? it.key === "exam"
+                    ? "grad-warm"
+                    : "grad-cool"
+                  : "border border-border bg-secondary/60",
               )}
             >
-              <it.icon className="h-5 w-5 text-primary-foreground" />
+              <it.icon
+                className={cn(
+                  "h-5 w-5",
+                  it.unlocked ? "text-primary-foreground" : "text-muted-foreground",
+                )}
+              />
             </div>
-            <span className="min-w-0 flex-1 truncate font-semibold">{it.label}</span>
-            {it.unlocked ? null : <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate font-semibold",
+                !it.unlocked && "text-muted-foreground",
+              )}
+            >
+              {it.label}
+            </span>
+            {it.unlocked ? null : (
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-secondary/70 backdrop-blur-xl">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              </span>
+            )}
+            {it.unlocked ? null : (
+              <span className="pointer-events-none absolute inset-0 bg-background/35 backdrop-blur-[2px]" />
+            )}
           </button>
         ))}
       </div>
@@ -123,11 +146,12 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
       <Card className="py-12 text-center">
         <div className="mb-3 text-4xl">{pct >= 80 ? "🏆" : pct >= 50 ? "👏" : "💪"}</div>
         <h2 className="text-lg font-bold">{tr("result")}</h2>
-        <p className="mt-2 text-3xl font-bold tabular-nums text-primary">
+        <p className="mt-2 text-3xl font-bold tabular-nums text-accent">
           {score} / {questions.length}
         </p>
         <div className="mt-6">
           <Button
+            variant="neon"
             onClick={() => {
               refreshCards();
               onExit();
@@ -156,9 +180,7 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
         <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {kind === "spell" ? tr("typeWord") : tr("quiz")}
         </p>
-        <p className="text-2xl font-bold">
-          {kind === "spell" ? q.card.translation : q.card.word}
-        </p>
+        <p className="text-2xl font-bold">{kind === "spell" ? q.card.translation : q.card.word}</p>
         {q.card.example && answered !== null ? (
           <p className="mx-auto mt-3 max-w-xs text-xs text-muted-foreground italic">
             {q.card.example}
@@ -173,14 +195,13 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
             onChange={(e) => setInput(e.target.value)}
             disabled={answered !== null}
             placeholder={tr("typeWord")}
-            className="w-full rounded-2xl border border-input bg-card px-4 py-3.5 text-center text-lg font-semibold outline-none focus:border-primary"
+            className="w-full rounded-2xl border border-input bg-card/70 px-4 py-3.5 text-center text-lg font-semibold outline-none focus:border-accent"
           />
           {answered === null ? (
             <Button
+              variant="neon"
               disabled={!input.trim()}
-              onClick={() =>
-                submit(input.trim().toLowerCase() === q.card.word.trim().toLowerCase())
-              }
+              onClick={() => submit(input.trim().toLowerCase() === q.card.word.trim().toLowerCase())}
             >
               {tr("submitAnswer")}
             </Button>
@@ -188,10 +209,7 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
         </div>
       ) : (
         <div className="space-y-2.5">
-          {(kind === "match"
-            ? shuffle(q.options)
-            : q.options
-          ).map((opt) => {
+          {(kind === "match" ? shuffle(q.options) : q.options).map((opt) => {
             const isCorrect = opt === q.card.translation;
             const show = answered !== null;
             return (
@@ -202,7 +220,7 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
                 className={cn(
                   "ios-card w-full p-4 text-left font-semibold transition-all active:scale-[0.98]",
                   show && isCorrect && "bg-success/15 text-success",
-                  show && !isCorrect && "opacity-50",
+                  show && !isCorrect && "opacity-40",
                 )}
               >
                 {opt}
@@ -222,7 +240,9 @@ function Session({ mode, pool, onExit }: { mode: Mode; pool: CardRow[]; onExit: 
           >
             {answered ? tr("correct") : `${tr("wrong")} — ${q.card.word}`}
           </p>
-          <Button onClick={next}>{tr("continue")}</Button>
+          <Button variant="neon" onClick={next}>
+            {tr("continue")}
+          </Button>
         </div>
       ) : null}
     </div>
