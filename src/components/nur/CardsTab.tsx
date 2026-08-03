@@ -157,7 +157,7 @@ export function CardsTab() {
             <div
               key={c.id}
               className={cn(
-                "absolute inset-x-0 top-0 h-full px-4 pt-5 pb-2 will-change-transform",
+                "absolute inset-x-0 top-0 h-full px-3 pt-6 pb-3 will-change-transform",
                 animating && "transition-transform duration-300 ease-out",
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
