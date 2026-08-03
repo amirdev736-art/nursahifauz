@@ -140,18 +140,22 @@ export const checkSubscription = createServerFn({ method: "POST" })
 
     const missing: Channel[] = [];
     for (const ch of (channels ?? []) as Channel[]) {
+      const handle = ch.username.replace(/^.*t\.me\//i, "").replace(/^@+/, "").trim();
       try {
         const res = (await tgCall("getChatMember", {
-          chat_id: `@${ch.username}`,
+          chat_id: `@${handle}`,
           user_id: user.id,
         })) as { status?: string };
-        const ok = ["creator", "administrator", "member"].includes(res?.status ?? "");
-        if (!ok) missing.push(ch);
+        const status = res?.status ?? "";
+        // faqat aniq "obuna emas" holatlarida bloklaymiz
+        if (["left", "kicked", "restricted"].includes(status)) missing.push(ch);
       } catch (e) {
-        console.error("getChatMember failed", ch.username, e);
-        missing.push(ch);
+        // Kanalni tekshirib bo'lmadi (bot admin emas / kanal topilmadi / gateway xatosi).
+        // Bunday holatda foydalanuvchini bloklamaymiz.
+        console.error("getChatMember failed", handle, e);
       }
     }
+
     const subscribed = missing.length === 0;
     await db
       .from("profiles")
