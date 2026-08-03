@@ -55,17 +55,18 @@ async function missingChannels(userId: number): Promise<Channel[]> {
   const channels = await activeChannels();
   const missing: Channel[] = [];
   for (const ch of channels) {
+    const handle = ch.username.replace(/^.*t\.me\//i, "").replace(/^@+/, "").trim();
     const res = (await tg("getChatMember", {
-      chat_id: `@${ch.username}`,
+      chat_id: `@${handle}`,
       user_id: userId,
     })) as { ok?: boolean; result?: { status?: string } };
-    const ok =
-      res.ok === true &&
-      ["creator", "administrator", "member"].includes(res.result?.status ?? "");
-    if (!ok) missing.push(ch);
+    // tekshirib bo'lmasa (bot admin emas / xato) — bloklamaymiz
+    if (res.ok !== true) continue;
+    if (["left", "kicked", "restricted"].includes(res.result?.status ?? "")) missing.push(ch);
   }
   return missing;
 }
+
 
 function gateMarkup(missing: Channel[]) {
   return {
