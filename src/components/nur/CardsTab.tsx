@@ -118,8 +118,8 @@ export function CardsTab() {
   if (!list.length) {
     return (
       <Card className="py-10 text-center">
-        <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-3xl bg-secondary">
-          <Sparkles className="h-6 w-6 text-primary" />
+        <div className="grad-cool mx-auto mb-4 grid h-14 w-14 place-items-center rounded-3xl shadow-[var(--glow-blue)]">
+          <Sparkles className="h-6 w-6 text-primary-foreground" />
         </div>
         <h2 className="text-lg font-bold">{tr("noCards")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{tr("noCardsDesc")}</p>
@@ -128,12 +128,12 @@ export function CardsTab() {
   }
 
   return (
-    <div className="relative -mx-4 h-[calc(100dvh-8.5rem)] overflow-hidden select-none">
+    <div className="relative -mx-4 -mt-4 h-[calc(100dvh-5.5rem)] overflow-hidden bg-background select-none">
       {/* ultra-thin progress */}
-      <div className="absolute inset-x-4 top-0 z-30 flex items-center gap-2">
-        <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-secondary">
+      <div className="absolute inset-x-4 top-2 z-30 flex items-center gap-2">
+        <div className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/10">
           <div
-            className="grad-warm h-full rounded-full transition-[width] duration-300"
+            className="grad-cool h-full rounded-full shadow-[var(--glow-blue)] transition-[width] duration-300"
             style={{ width: `${((idx + 1) / list.length) * 100}%` }}
           />
         </div>
@@ -141,6 +141,7 @@ export function CardsTab() {
           {idx + 1}/{list.length}
         </span>
       </div>
+
 
       <div
         className="h-full w-full touch-none"
