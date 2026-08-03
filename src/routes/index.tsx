@@ -62,23 +62,32 @@ function Tabs() {
       {tab === "quiz" && <QuizTab />}
       {tab === "profile" && <ProfileTab />}
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl">
         <div className="mx-auto grid max-w-md grid-cols-4">
           {items.map((it) => (
             <button
               key={it.key}
               onClick={() => setTab(it.key)}
               className={cn(
-                "flex flex-col items-center gap-1 py-2.5 transition-colors",
-                tab === it.key ? "text-primary" : "text-muted-foreground",
+                "relative flex flex-col items-center gap-1 py-2.5 transition-colors",
+                tab === it.key ? "text-accent" : "text-muted-foreground",
               )}
             >
-              <it.icon className={cn("h-5 w-5", tab === it.key && "scale-110")} />
+              {tab === it.key ? (
+                <span className="grad-cool absolute top-0 h-[2px] w-8 rounded-full shadow-[var(--glow-blue)]" />
+              ) : null}
+              <it.icon
+                className={cn(
+                  "h-5 w-5 transition-transform",
+                  tab === it.key && "scale-110 drop-shadow-[0_0_8px_var(--color-accent)]",
+                )}
+              />
               <span className="text-[10px] font-semibold">{it.label}</span>
             </button>
           ))}
         </div>
       </nav>
+
     </>
   );
 }
