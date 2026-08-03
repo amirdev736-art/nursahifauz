@@ -74,7 +74,8 @@ export function Gate({ children }: { children: React.ReactNode }) {
 
   if (sub.isLoading) return <Spinner label={tr("checking")} />;
 
-  if (sub.data && !sub.data.subscribed) {
+  if (sub.data && !sub.data.subscribed && sub.data.missing.length > 0) {
+
     return (
       <div className="space-y-4 pt-6">
         <div className="text-center">
