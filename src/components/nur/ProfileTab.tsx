@@ -1,11 +1,11 @@
-import { Flame, Globe, ShieldCheck, Check } from "lucide-react";
+import { Flame, Globe, ShieldCheck, Check, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Card, SectionTitle, Stat } from "@/components/nur/ui";
 import { useNur } from "@/lib/nur-context";
 import { LANGS, type LangCode } from "@/lib/i18n";
 import { setLanguage } from "@/lib/nur.functions";
 import { LEARNED_STREAK } from "@/lib/srs";
-import { CreditsBar, PlansList, ReferralCard } from "@/components/nur/Paywall";
+import { CreditsBar, PlansList, ReferralCard, TierBadge } from "@/components/nur/Paywall";
 
 export function ProfileTab() {
   const { tr, firstName, streakDays, cards, lang, setLang, initData, isAdmin } = useNur();
@@ -14,11 +14,14 @@ export function ProfileTab() {
   return (
     <div className="space-y-4 pb-4">
       <Card className="flex items-center gap-4">
-        <div className="grad-warm grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-xl font-bold text-primary-foreground">
+        <div className="grad-cool grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-xl font-bold text-primary-foreground shadow-[var(--glow-blue)]">
           {(firstName || "N").slice(0, 1).toUpperCase()}
         </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-bold">{firstName || "Nur"}</h1>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-lg font-bold">{firstName || "Nur"}</h1>
+            <TierBadge />
+          </div>
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Flame className="h-3.5 w-3.5 text-primary" />
             {streakDays} · {tr("streak")}
@@ -32,8 +35,18 @@ export function ProfileTab() {
         <Stat value={LEARNED_STREAK} label="SRS" tone="text-accent" />
       </div>
 
-      <SectionTitle>Kreditlar</SectionTitle>
+      <SectionTitle>Kunlik kreditlar</SectionTitle>
       <CreditsBar />
+      <div className="ios-card flex items-start gap-3 p-4">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Birinchi kun uchun <span className="font-semibold text-foreground">15 kredit</span>{" "}
+          beriladi. Ishlatmasangiz saqlanadi, ishlatsangiz keyingi kunlardan{" "}
+          <span className="font-semibold text-foreground">kuniga 5 kredit</span> yangilanadi.
+        </p>
+      </div>
+
+      <SectionTitle>Do'st taklif qilish</SectionTitle>
       <ReferralCard />
 
       <SectionTitle>Obuna darajalari</SectionTitle>
@@ -52,7 +65,7 @@ export function ProfileTab() {
           >
             <span className="text-lg">{l.flag}</span>
             <span className="min-w-0 flex-1 truncate font-medium">{l.label}</span>
-            {lang === l.code ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+            {lang === l.code ? <Check className="h-4 w-4 shrink-0 text-accent" /> : null}
           </button>
         ))}
       </div>
@@ -61,8 +74,8 @@ export function ProfileTab() {
         <>
           <SectionTitle>{tr("admin")}</SectionTitle>
           <Link to="/admin" className="ios-card flex items-center gap-3 p-4">
-            <div className="grad-cool grid h-10 w-10 shrink-0 place-items-center rounded-2xl">
-              <ShieldCheck className="h-5 w-5 text-accent-foreground" />
+            <div className="grad-warm grid h-10 w-10 shrink-0 place-items-center rounded-2xl">
+              <ShieldCheck className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="min-w-0 flex-1 truncate font-semibold">{tr("admin")}</span>
           </Link>
