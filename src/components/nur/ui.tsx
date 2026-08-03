@@ -6,16 +6,18 @@ export function Button({
   className,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "ghost" | "soft" | "success" | "danger" | "cool";
+  variant?: "primary" | "ghost" | "soft" | "success" | "danger" | "cool" | "neon";
 }) {
   return (
     <button
       {...props}
       className={cn(
-        "inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[15px] font-semibold transition-all active:scale-[0.97] disabled:opacity-50",
+        "inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[15px] font-semibold tracking-tight transition-all active:scale-[0.97] disabled:opacity-40",
         variant === "primary" && "grad-warm text-primary-foreground shadow-[var(--shadow-pop)]",
-        variant === "cool" && "grad-cool text-accent-foreground",
-        variant === "soft" && "bg-secondary text-secondary-foreground",
+        variant === "neon" &&
+          "grad-cool text-primary-foreground shadow-[var(--shadow-pop)] ring-1 ring-accent/50",
+        variant === "cool" && "grad-cool text-primary-foreground",
+        variant === "soft" && "border border-border bg-secondary/70 text-secondary-foreground",
         variant === "ghost" && "bg-transparent text-muted-foreground",
         variant === "success" && "bg-success text-success-foreground",
         variant === "danger" && "bg-destructive text-destructive-foreground",
@@ -41,7 +43,7 @@ export function Stat({ value, label, tone }: { value: ReactNode; label: string; 
 export function Spinner({ label }: { label?: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground">
-      <div className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <div className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-accent" />
       {label ? <span className="text-sm">{label}</span> : null}
     </div>
   );
@@ -49,7 +51,7 @@ export function Spinner({ label }: { label?: string }) {
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="px-1 pb-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+    <h2 className="px-1 pb-2 text-[12px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
       {children}
     </h2>
   );
@@ -57,9 +59,9 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 
 export function Progress({ value }: { value: number }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
       <div
-        className="grad-warm h-full rounded-full transition-all duration-500"
+        className="grad-cool h-full rounded-full transition-all duration-500"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
