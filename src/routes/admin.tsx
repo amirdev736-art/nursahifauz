@@ -556,6 +556,8 @@ function eventLabel(type: string) {
     word_add: "So'z qo'shildi",
     quiz: "Test ishlandi",
     review: "Takrorlash",
+    payment_request: "💳 To'lov cheki yuborildi (@davlatbekdev)",
+
   };
   return map[type] ?? type;
 }

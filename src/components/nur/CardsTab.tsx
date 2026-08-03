@@ -118,8 +118,8 @@ export function CardsTab() {
   if (!list.length) {
     return (
       <Card className="py-10 text-center">
-        <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-3xl bg-secondary">
-          <Sparkles className="h-6 w-6 text-primary" />
+        <div className="grad-cool mx-auto mb-4 grid h-14 w-14 place-items-center rounded-3xl shadow-[var(--glow-blue)]">
+          <Sparkles className="h-6 w-6 text-primary-foreground" />
         </div>
         <h2 className="text-lg font-bold">{tr("noCards")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{tr("noCardsDesc")}</p>
@@ -128,12 +128,12 @@ export function CardsTab() {
   }
 
   return (
-    <div className="relative -mx-4 h-[calc(100dvh-8.5rem)] overflow-hidden select-none">
+    <div className="relative -mx-4 -mt-4 h-[calc(100dvh-5.5rem)] overflow-hidden bg-background select-none">
       {/* ultra-thin progress */}
-      <div className="absolute inset-x-4 top-0 z-30 flex items-center gap-2">
-        <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-secondary">
+      <div className="absolute inset-x-4 top-2 z-30 flex items-center gap-2">
+        <div className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/10">
           <div
-            className="grad-warm h-full rounded-full transition-[width] duration-300"
+            className="grad-cool h-full rounded-full shadow-[var(--glow-blue)] transition-[width] duration-300"
             style={{ width: `${((idx + 1) / list.length) * 100}%` }}
           />
         </div>
@@ -141,6 +141,7 @@ export function CardsTab() {
           {idx + 1}/{list.length}
         </span>
       </div>
+
 
       <div
         className="h-full w-full touch-none"
@@ -156,7 +157,7 @@ export function CardsTab() {
             <div
               key={c.id}
               className={cn(
-                "absolute inset-x-0 top-0 h-full px-4 pt-5 pb-2 will-change-transform",
+                "absolute inset-x-0 top-0 h-full px-3 pt-6 pb-3 will-change-transform",
                 animating && "transition-transform duration-300 ease-out",
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
@@ -229,9 +230,9 @@ function OverlayButton({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-border/60 bg-card/70 backdrop-blur-xl transition-transform active:scale-90",
+        "pointer-events-auto grid h-12 w-12 place-items-center rounded-full border border-white/12 bg-white/8 backdrop-blur-2xl transition-transform active:scale-90",
         tone === "danger" ? "text-destructive" : "text-foreground",
-        active && "bg-primary/15 text-primary",
+        active && "border-accent/50 bg-accent/20 text-accent shadow-[var(--glow-blue)]",
       )}
     >
       {children}
@@ -249,29 +250,32 @@ function FlipCard({
   phonetic: string;
 }) {
   return (
-    <div className="h-full w-full" style={{ perspective: "1400px" }}>
+    <div className="h-full w-full" style={{ perspective: "1600px" }}>
       <div
         className="relative h-full w-full transition-transform duration-500 will-change-transform"
         style={{
           transformStyle: "preserve-3d",
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
         <div
-          className="ios-card absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center"
+          className="glass-panel absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center shadow-[var(--shadow-pop)]"
           style={{ backfaceVisibility: "hidden" }}
         >
-          <p className="text-[40px] leading-tight font-bold tracking-tight">{card.word}</p>
-          <p className="text-sm font-medium text-primary">{phonetic}</p>
+          <p className="text-[46px] leading-[1.05] font-bold tracking-tight text-foreground">
+            {card.word}
+          </p>
+          <p className="text-base font-medium tracking-wide text-accent">{phonetic}</p>
         </div>
         <div
-          className="ios-card absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center"
+          className="glass-panel absolute inset-0 flex flex-col items-center justify-center gap-5 px-8 text-center shadow-[var(--shadow-pop)]"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          <p className="text-2xl font-bold text-primary">{card.translation}</p>
+          <p className="text-3xl font-bold tracking-tight text-foreground">{card.translation}</p>
           {card.example ? (
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground italic">
-              {card.example}
+              “{card.example}”
             </p>
           ) : null}
         </div>
@@ -283,3 +287,4 @@ function FlipCard({
 function toPhonetic(word: string) {
   return `/${word.toLowerCase()}/`;
 }
+

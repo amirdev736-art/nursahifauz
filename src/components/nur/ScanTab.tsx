@@ -1,11 +1,18 @@
 import { useRef, useState } from "react";
-import { Camera, Loader2, Plus, RefreshCw, X, Check } from "lucide-react";
+import { Camera, Loader2, Plus, RefreshCw, X, Check, Wand2 } from "lucide-react";
 import { Button, Card, Spinner } from "@/components/nur/ui";
 import { useNur } from "@/lib/nur-context";
 import { addCard, ocrImage, translateWord } from "@/lib/nur.functions";
 import { haptic } from "@/lib/telegram";
 import { CreditsBar, PaywallSheet } from "@/components/nur/Paywall";
 import { toast } from "sonner";
+
+const SAMPLE_TEXT = `Cambridge IELTS 15 — Reading Passage 1
+Many species undergo remarkable changes when their habitat is altered.
+Researchers have documented a substantial decline in insect populations,
+which could jeopardise the stability of entire ecosystems.
+Nevertheless, some communities have managed to mitigate the damage by
+restoring native vegetation along riverbanks.`;
 
 async function compress(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
@@ -56,6 +63,17 @@ export function ScanTab() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function trySample() {
+    haptic("light");
+    setBusy(true);
+    setText("");
+    window.setTimeout(() => {
+      setText(SAMPLE_TEXT);
+      setBusy(false);
+      toast.success("Namuna sahifa o'qildi — so'z ustiga bosing");
+    }, 700);
   }
 
   async function pick(word: string, sentence: string) {
@@ -109,20 +127,27 @@ export function ScanTab() {
         }}
       />
 
-      <CreditsBar />
+      <CreditsBar compact />
 
       {!text && !busy && (
-        <Card className="flex flex-col items-center gap-4 py-9 text-center">
-          <div className="grad-warm grid h-16 w-16 place-items-center rounded-3xl shadow-[var(--shadow-pop)]">
+        <Card className="flex flex-col items-center gap-4 py-10 text-center">
+          <div className="grad-cool grid h-16 w-16 place-items-center rounded-3xl shadow-[var(--shadow-pop)]">
             <Camera className="h-8 w-8 text-primary-foreground" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-lg font-bold">{tr("scanTitle")}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{tr("scanTitle")}</h1>
             <p className="text-sm text-muted-foreground">{tr("scanDesc")}</p>
           </div>
-          <Button onClick={() => fileRef.current?.click()}>
+          <Button variant="neon" onClick={() => fileRef.current?.click()}>
             <Camera className="h-4 w-4" /> {tr("takePhoto")}
           </Button>
+          <button
+            onClick={trySample}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent underline decoration-accent/40 underline-offset-4"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Kitob yo'qmi? Mana bu namuna rasmni sinab ko'ring
+          </button>
         </Card>
       )}
 
@@ -138,7 +163,7 @@ export function ScanTab() {
             <span className="text-[13px] font-semibold text-muted-foreground">{tr("tapWord")}</span>
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[13px] font-semibold text-secondary-foreground"
+              className="flex items-center gap-1.5 rounded-full border border-border bg-secondary/70 px-3 py-1.5 text-[13px] font-semibold text-secondary-foreground"
             >
               <RefreshCw className="h-3.5 w-3.5" /> {tr("newPhoto")}
             </button>
@@ -153,7 +178,7 @@ export function ScanTab() {
                     <span
                       key={ci}
                       onClick={() => pick(clean, line)}
-                      className="cursor-pointer rounded-md px-0.5 transition-colors active:bg-primary/25"
+                      className="cursor-pointer rounded-md px-0.5 transition-colors active:bg-accent/30"
                     >
                       {chunk}
                     </span>
@@ -169,11 +194,11 @@ export function ScanTab() {
 
       {picked && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-[3px]"
           onClick={() => setPicked(null)}
         >
           <div
-            className="animate-pop w-full rounded-t-[28px] bg-card p-6 pb-8 shadow-[var(--shadow-pop)]"
+            className="animate-pop w-full rounded-t-[28px] border-t border-border bg-card/95 p-6 pb-8 backdrop-blur-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border" />
@@ -185,7 +210,7 @@ export function ScanTab() {
                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> {tr("translating")}
                   </p>
                 ) : (
-                  <p className="mt-1 text-lg font-semibold text-primary">{tState.translation}</p>
+                  <p className="mt-1 text-lg font-semibold text-accent">{tState.translation}</p>
                 )}
               </div>
               <button
@@ -196,13 +221,13 @@ export function ScanTab() {
               </button>
             </div>
             {tState.example ? (
-              <p className="mt-3 border-l-2 border-primary/50 pl-3 text-sm text-muted-foreground italic">
+              <p className="mt-3 border-l-2 border-accent/50 pl-3 text-sm text-muted-foreground italic">
                 {tState.example}
               </p>
             ) : null}
             <div className="mt-5">
               <Button
-                variant={tState.saved ? "success" : "primary"}
+                variant={tState.saved ? "success" : "neon"}
                 disabled={tState.loading || !tState.translation}
                 onClick={save}
               >
