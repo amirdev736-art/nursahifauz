@@ -230,9 +230,9 @@ function OverlayButton({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-border/60 bg-card/70 backdrop-blur-xl transition-transform active:scale-90",
+        "pointer-events-auto grid h-12 w-12 place-items-center rounded-full border border-white/12 bg-white/8 backdrop-blur-2xl transition-transform active:scale-90",
         tone === "danger" ? "text-destructive" : "text-foreground",
-        active && "bg-primary/15 text-primary",
+        active && "border-accent/50 bg-accent/20 text-accent shadow-[var(--glow-blue)]",
       )}
     >
       {children}
@@ -250,29 +250,32 @@ function FlipCard({
   phonetic: string;
 }) {
   return (
-    <div className="h-full w-full" style={{ perspective: "1400px" }}>
+    <div className="h-full w-full" style={{ perspective: "1600px" }}>
       <div
         className="relative h-full w-full transition-transform duration-500 will-change-transform"
         style={{
           transformStyle: "preserve-3d",
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
         <div
-          className="ios-card absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center"
+          className="glass-panel absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center shadow-[var(--shadow-pop)]"
           style={{ backfaceVisibility: "hidden" }}
         >
-          <p className="text-[40px] leading-tight font-bold tracking-tight">{card.word}</p>
-          <p className="text-sm font-medium text-primary">{phonetic}</p>
+          <p className="text-[46px] leading-[1.05] font-bold tracking-tight text-foreground">
+            {card.word}
+          </p>
+          <p className="text-base font-medium tracking-wide text-accent">{phonetic}</p>
         </div>
         <div
-          className="ios-card absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center"
+          className="glass-panel absolute inset-0 flex flex-col items-center justify-center gap-5 px-8 text-center shadow-[var(--shadow-pop)]"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          <p className="text-2xl font-bold text-primary">{card.translation}</p>
+          <p className="text-3xl font-bold tracking-tight text-foreground">{card.translation}</p>
           {card.example ? (
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground italic">
-              {card.example}
+              “{card.example}”
             </p>
           ) : null}
         </div>
@@ -284,3 +287,4 @@ function FlipCard({
 function toPhonetic(word: string) {
   return `/${word.toLowerCase()}/`;
 }
+
