@@ -57,7 +57,7 @@ function Tabs() {
 
   return (
     <>
-      {tab === "scan" && <ScanTab />}
+      {tab === "scan" && <ScanTab onGoToSwipe={() => setTab("cards")} />}
       {tab === "cards" && <CardsTab />}
       {tab === "quiz" && <QuizTab />}
       {tab === "profile" && <ProfileTab />}
