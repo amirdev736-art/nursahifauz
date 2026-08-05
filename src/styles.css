@@ -47,36 +47,36 @@
     system-ui, sans-serif;
 
   /* Pitch-black studio + neon purple / cyber blue laser accents */
-  --background: oklch(0 0 0);
+  --background: oklch(0.155 0.052 269);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.16 0.02 285);
+  --card: oklch(0.215 0.05 268);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.14 0.02 285);
+  --popover: oklch(0.195 0.05 268);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.62 0.25 300);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.22 0.02 285);
+  --primary: oklch(0.887 0.183 95);
+  --primary-foreground: oklch(0.16 0.05 269);
+  --secondary: oklch(0.255 0.048 268);
   --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.2 0.015 285);
-  --muted-foreground: oklch(0.7 0.02 285);
-  --accent: oklch(0.72 0.18 235);
-  --accent-foreground: oklch(0.12 0.02 285);
+  --muted: oklch(0.235 0.045 268);
+  --muted-foreground: oklch(0.75 0.03 265);
+  --accent: oklch(0.887 0.183 95);
+  --accent-foreground: oklch(0.16 0.05 269);
   --destructive: oklch(0.62 0.23 22);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.72 0.17 165);
-  --success-foreground: oklch(0.12 0.02 285);
+  --success-foreground: oklch(0.16 0.05 269);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.72 0.18 235);
+  --ring: oklch(0.887 0.183 95);
 
-  --gradient-warm: linear-gradient(135deg, oklch(0.62 0.25 300), oklch(0.7 0.19 250));
-  --gradient-cool: linear-gradient(135deg, oklch(0.72 0.18 235), oklch(0.6 0.24 295));
+  --gradient-warm: linear-gradient(135deg, oklch(0.887 0.183 95), oklch(0.79 0.15 78));
+  --gradient-cool: linear-gradient(135deg, oklch(0.887 0.183 95), oklch(0.74 0.14 70));
   --shadow-card: 0 1px 0 oklch(1 0 0 / 0.05) inset, 0 12px 32px oklch(0 0 0 / 0.6);
   --shadow-pop:
-    0 0 0 1px oklch(0.62 0.25 300 / 0.35), 0 10px 34px oklch(0.62 0.25 300 / 0.35),
-    0 0 60px oklch(0.72 0.18 235 / 0.22);
-  --glow-purple: 0 0 24px oklch(0.62 0.25 300 / 0.55);
-  --glow-blue: 0 0 24px oklch(0.72 0.18 235 / 0.55);
+    0 0 0 1px oklch(0.887 0.183 95 / 0.4), 0 10px 34px oklch(0.887 0.183 95 / 0.3),
+    0 0 60px oklch(0.887 0.183 95 / 0.2);
+  --glow-purple: 0 0 24px oklch(0.887 0.183 95 / 0.5);
+  --glow-blue: 0 0 26px oklch(0.887 0.183 95 / 0.5);
 }
 
 .dark {
@@ -92,7 +92,7 @@
   html,
   body {
     overscroll-behavior-y: none;
-    background-color: #000;
+    background-color: #0A1128;
   }
 
   body {
