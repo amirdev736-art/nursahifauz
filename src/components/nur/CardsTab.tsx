@@ -32,6 +32,19 @@ export function CardsTab() {
   );
   const locked = isChallenge;
 
+  // Pick a REAL scanned word from the user's DB cards for the retrieval challenge.
+  // Prefer cards that already have a contextual example sentence.
+  const challengeCard = useMemo(() => {
+    if (!current) return null;
+    const pool = list.filter((c) => c.example && c.example.trim().length > 0);
+    const source = pool.length ? pool : list;
+    if (!source.length) return current;
+    // Deterministic per-slide pick so the card doesn't reshuffle on re-render.
+    const seed = hashString(current.id);
+    return source[seed % source.length] ?? current;
+  }, [current, list]);
+
+
   const go = useCallback(
     (dir: 1 | -1) => {
       setIdx((i) => {
@@ -170,15 +183,23 @@ export function CardsTab() {
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
             >
-              {challengeHere ? (
+              {challengeHere && challengeCard ? (
                 <ChallengeCard
-                  card={c}
-                  onSolved={() => {
+                  key={challengeCard.id}
+                  card={challengeCard}
+
+                  onSolved={async () => {
                     setSolved((s) => ({ ...s, [c.id]: true }));
                     haptic("success");
+                    // reinforce SRS retention for the real scanned word
+                    await reviewCard({
+                      data: { initData, id: challengeCard.id, correct: true },
+                    });
+                    refreshCards();
                   }}
                 />
               ) : (
+
                 <FlipCard card={c} flipped={i === idx && flipped} phonetic={toPhonetic(c.word)} />
               )}
             </div>
@@ -255,7 +276,8 @@ function OverlayButton({
 function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void }) {
   const [value, setValue] = useState("");
   const [state, setState] = useState<"idle" | "wrong" | "ok">("idle");
-  const sentence = blankOut(card.example, card.word);
+  const sentence = blankOut(card.example, card.word, card.translation);
+
 
   function submit() {
     if (value.trim().toLowerCase() === card.word.trim().toLowerCase()) {
@@ -307,12 +329,19 @@ function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void
   );
 }
 
-function blankOut(example: string | null, word: string) {
+function hashString(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function blankOut(example: string | null, word: string, translation: string) {
   const blank = "________";
-  if (!example) return `Type the English word for the meaning below: ${blank}`;
+  if (!example || !example.trim()) return `${translation} → ${blank}`;
   const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\w*\\b`, "gi");
   return re.test(example) ? example.replace(re, blank) : `${example} → ${blank}`;
 }
+
 
 function FlipCard({
   card,
