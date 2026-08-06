@@ -45,7 +45,7 @@ function Index() {
 type TabKey = "scan" | "cards" | "quiz" | "profile";
 
 function Tabs() {
-  const { tr } = useNur();
+  const [tab, setTab] = useState<TabKey>("scan");
   const [tab, setTab] = useState<TabKey>("scan");
 
   const items = [
