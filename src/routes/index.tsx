@@ -49,10 +49,10 @@ function Tabs() {
   const [tab, setTab] = useState<TabKey>("scan");
 
   const items = [
-    { key: "scan" as const, icon: Camera, label: tr("scan") },
-    { key: "cards" as const, icon: Layers, label: tr("cards") },
-    { key: "quiz" as const, icon: Target, label: tr("quiz") },
-    { key: "profile" as const, icon: User, label: tr("profile") },
+    { key: "scan" as const, icon: Camera, label: "SCAN" },
+    { key: "cards" as const, icon: Layers, label: "SWIPE" },
+    { key: "quiz" as const, icon: Target, label: "QUIZ" },
+    { key: "profile" as const, icon: User, label: "ME" },
   ];
 
   return (

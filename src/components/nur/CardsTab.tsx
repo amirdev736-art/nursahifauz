@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Trash2, Sparkles, Volume2, Gauge, ChevronUp } from "lucide-react";
+import { Trash2, Sparkles, Volume2, Star, ArrowRight, Check } from "lucide-react";
 import { Card, Spinner } from "@/components/nur/ui";
 import { useNur } from "@/lib/nur-context";
 import { deleteCard, reviewCard, type CardRow } from "@/lib/nur.functions";
@@ -7,6 +7,7 @@ import { haptic } from "@/lib/telegram";
 import { cn } from "@/lib/utils";
 
 const SWIPE_THRESHOLD = 70;
+const CHALLENGE_EVERY = 5;
 
 export function CardsTab() {
   const { tr, cards, cardsLoading, initData, refreshCards } = useNur();
@@ -16,6 +17,7 @@ export function CardsTab() {
   const [drag, setDrag] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
+  const [solved, setSolved] = useState<Record<string, boolean>>({});
   const startY = useRef<number | null>(null);
   const moved = useRef(false);
 
@@ -25,6 +27,10 @@ export function CardsTab() {
   }, [cards]);
 
   const current = list[idx];
+  const isChallenge = Boolean(
+    current && (idx + 1) % CHALLENGE_EVERY === 0 && !solved[current.id],
+  );
+  const locked = isChallenge;
 
   const go = useCallback(
     (dir: 1 | -1) => {
@@ -41,6 +47,7 @@ export function CardsTab() {
   );
 
   function onPointerDown(e: React.PointerEvent) {
+    if (locked) return;
     if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
     startY.current = e.clientY;
     moved.current = false;
@@ -69,13 +76,14 @@ export function CardsTab() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (locked) return;
       if (e.key === "ArrowDown") go(1);
       if (e.key === "ArrowUp") go(-1);
       if (e.key === " ") setFlipped((f) => !f);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go]);
+  }, [go, locked]);
 
   const speak = useCallback((word: string) => {
     try {
@@ -129,7 +137,7 @@ export function CardsTab() {
 
   return (
     <div className="relative -mx-4 -mt-4 h-[calc(100dvh-5.5rem)] overflow-hidden bg-background select-none">
-      {/* ultra-thin progress */}
+      {/* paper-thin progress + numeric status */}
       <div className="absolute inset-x-4 top-2 z-30 flex items-center gap-2">
         <div className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/10">
           <div
@@ -137,11 +145,10 @@ export function CardsTab() {
             style={{ width: `${((idx + 1) / list.length) * 100}%` }}
           />
         </div>
-        <span className="text-[10px] font-bold tabular-nums text-muted-foreground">
+        <span className="text-[10px] font-bold tabular-nums text-accent">
           {idx + 1}/{list.length}
         </span>
       </div>
-
 
       <div
         className="h-full w-full touch-none"
@@ -153,6 +160,7 @@ export function CardsTab() {
         {neighbors.map((i) => {
           const c = list[i];
           const offset = (i - idx) * 100;
+          const challengeHere = i === idx && isChallenge;
           return (
             <div
               key={c.id}
@@ -162,7 +170,17 @@ export function CardsTab() {
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
             >
-              <FlipCard card={c} flipped={i === idx && flipped} phonetic={toPhonetic(c.word)} />
+              {challengeHere ? (
+                <ChallengeCard
+                  card={c}
+                  onSolved={() => {
+                    setSolved((s) => ({ ...s, [c.id]: true }));
+                    haptic("success");
+                  }}
+                />
+              ) : (
+                <FlipCard card={c} flipped={i === idx && flipped} phonetic={toPhonetic(c.word)} />
+              )}
             </div>
           );
         })}
@@ -171,7 +189,7 @@ export function CardsTab() {
       {/* right-side overlay actions */}
       <div className="pointer-events-none absolute right-6 bottom-8 z-30 flex flex-col items-center gap-3">
         <OverlayButton label="audio" onClick={() => current && speak(current.word)}>
-          <Volume2 className="h-5 w-5" />
+          <Volume2 className="h-5 w-5 text-foreground" />
         </OverlayButton>
         <div className="relative">
           {rateOpen ? (
@@ -193,20 +211,14 @@ export function CardsTab() {
               </button>
             </div>
           ) : null}
-          <OverlayButton label="rate" active={rateOpen} onClick={() => setRateOpen((o) => !o)}>
-            <Gauge className="h-5 w-5" />
+          <OverlayButton label="difficulty" active={rateOpen} onClick={() => setRateOpen((o) => !o)}>
+            <Star className="h-5 w-5 fill-accent text-accent drop-shadow-[0_0_8px_var(--color-accent)]" />
           </OverlayButton>
         </div>
         <OverlayButton label="delete" tone="danger" onClick={removeCard}>
           <Trash2 className="h-5 w-5" />
         </OverlayButton>
       </div>
-
-      {idx < list.length - 1 ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
-          <ChevronUp className="h-5 w-5 animate-bounce text-muted-foreground/60" />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -232,12 +244,74 @@ function OverlayButton({
       className={cn(
         "pointer-events-auto grid h-12 w-12 place-items-center rounded-full border border-white/12 bg-white/8 backdrop-blur-2xl transition-transform active:scale-90",
         tone === "danger" ? "text-destructive" : "text-foreground",
-        active && "border-accent/50 bg-accent/20 text-accent shadow-[var(--glow-blue)]",
+        active && "border-accent/50 bg-accent/20 shadow-[var(--glow-blue)]",
       )}
     >
       {children}
     </button>
   );
+}
+
+function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void }) {
+  const [value, setValue] = useState("");
+  const [state, setState] = useState<"idle" | "wrong" | "ok">("idle");
+  const sentence = blankOut(card.example, card.word);
+
+  function submit() {
+    if (value.trim().toLowerCase() === card.word.trim().toLowerCase()) {
+      setState("ok");
+      setTimeout(onSolved, 500);
+    } else {
+      setState("wrong");
+      haptic("error");
+    }
+  }
+
+  return (
+    <div
+      data-no-drag
+      className={cn(
+        "glass-panel flex h-full w-full flex-col items-center justify-center gap-6 px-7 text-center transition-shadow duration-300",
+        state === "ok" ? "shadow-[0_0_60px_var(--color-success)]" : "shadow-[var(--shadow-pop)]",
+        state === "wrong" && "animate-shake",
+      )}
+    >
+      <p className="text-xl leading-relaxed font-semibold text-foreground">{sentence}</p>
+      <p className="text-base font-medium text-accent">({card.translation})</p>
+      <div className="flex w-full max-w-xs items-center gap-2">
+        <input
+          value={value}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setState("idle");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          className="h-12 flex-1 rounded-2xl border border-white/12 bg-white/8 px-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent/60"
+        />
+        <button
+          aria-label="submit"
+          onClick={submit}
+          className="grad-cool grid h-12 w-12 shrink-0 place-items-center rounded-full shadow-[var(--glow-blue)] transition-transform active:scale-90"
+        >
+          {state === "ok" ? (
+            <Check className="h-5 w-5 text-primary-foreground" />
+          ) : (
+            <ArrowRight className="h-5 w-5 text-primary-foreground" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function blankOut(example: string | null, word: string) {
+  const blank = "________";
+  if (!example) return `Type the English word for the meaning below: ${blank}`;
+  const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\w*\\b`, "gi");
+  return re.test(example) ? example.replace(re, blank) : `${example} → ${blank}`;
 }
 
 function FlipCard({
@@ -287,4 +361,3 @@ function FlipCard({
 function toPhonetic(word: string) {
   return `/${word.toLowerCase()}/`;
 }
-
