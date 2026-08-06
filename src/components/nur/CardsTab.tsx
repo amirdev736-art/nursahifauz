@@ -32,6 +32,19 @@ export function CardsTab() {
   );
   const locked = isChallenge;
 
+  // Pick a REAL scanned word from the user's DB cards for the retrieval challenge.
+  // Prefer cards that already have a contextual example sentence.
+  const challengeCard = useMemo(() => {
+    if (!current) return null;
+    const pool = list.filter((c) => c.example && c.example.trim().length > 0);
+    const source = pool.length ? pool : list;
+    if (!source.length) return current;
+    // Deterministic per-slide pick so the card doesn't reshuffle on re-render.
+    const seed = hashString(current.id);
+    return source[seed % source.length] ?? current;
+  }, [current, list]);
+
+
   const go = useCallback(
     (dir: 1 | -1) => {
       setIdx((i) => {
