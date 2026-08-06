@@ -326,12 +326,19 @@ function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void
   );
 }
 
-function blankOut(example: string | null, word: string) {
+function hashString(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function blankOut(example: string | null, word: string, translation: string) {
   const blank = "________";
-  if (!example) return `Type the English word for the meaning below: ${blank}`;
+  if (!example || !example.trim()) return `${translation} → ${blank}`;
   const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\w*\\b`, "gi");
   return re.test(example) ? example.replace(re, blank) : `${example} → ${blank}`;
 }
+
 
 function FlipCard({
   card,
