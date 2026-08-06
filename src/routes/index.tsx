@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Camera, Layers, Target, User } from "lucide-react";
-import { NurProvider, useNur } from "@/lib/nur-context";
+import { NurProvider } from "@/lib/nur-context";
 import { Gate } from "@/components/nur/Gate";
 import { ScanTab } from "@/components/nur/ScanTab";
 import { CardsTab } from "@/components/nur/CardsTab";
@@ -45,14 +45,13 @@ function Index() {
 type TabKey = "scan" | "cards" | "quiz" | "profile";
 
 function Tabs() {
-  const { tr } = useNur();
   const [tab, setTab] = useState<TabKey>("scan");
 
   const items = [
-    { key: "scan" as const, icon: Camera, label: tr("scan") },
-    { key: "cards" as const, icon: Layers, label: tr("cards") },
-    { key: "quiz" as const, icon: Target, label: tr("quiz") },
-    { key: "profile" as const, icon: User, label: tr("profile") },
+    { key: "scan" as const, icon: Camera, label: "SCAN" },
+    { key: "cards" as const, icon: Layers, label: "SWIPE" },
+    { key: "quiz" as const, icon: Target, label: "QUIZ" },
+    { key: "profile" as const, icon: User, label: "ME" },
   ];
 
   return (
