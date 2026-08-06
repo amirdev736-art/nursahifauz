@@ -183,15 +183,21 @@ export function CardsTab() {
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
             >
-              {challengeHere ? (
+              {challengeHere && challengeCard ? (
                 <ChallengeCard
-                  card={c}
-                  onSolved={() => {
+                  card={challengeCard}
+                  onSolved={async () => {
                     setSolved((s) => ({ ...s, [c.id]: true }));
                     haptic("success");
+                    // reinforce SRS retention for the real scanned word
+                    await reviewCard({
+                      data: { initData, id: challengeCard.id, correct: true },
+                    });
+                    refreshCards();
                   }}
                 />
               ) : (
+
                 <FlipCard card={c} flipped={i === idx && flipped} phonetic={toPhonetic(c.word)} />
               )}
             </div>
