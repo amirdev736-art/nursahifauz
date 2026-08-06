@@ -46,7 +46,6 @@ type TabKey = "scan" | "cards" | "quiz" | "profile";
 
 function Tabs() {
   const [tab, setTab] = useState<TabKey>("scan");
-  const [tab, setTab] = useState<TabKey>("scan");
 
   const items = [
     { key: "scan" as const, icon: Camera, label: "SCAN" },
