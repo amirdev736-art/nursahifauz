@@ -185,7 +185,9 @@ export function CardsTab() {
             >
               {challengeHere && challengeCard ? (
                 <ChallengeCard
+                  key={challengeCard.id}
                   card={challengeCard}
+
                   onSolved={async () => {
                     setSolved((s) => ({ ...s, [c.id]: true }));
                     haptic("success");
