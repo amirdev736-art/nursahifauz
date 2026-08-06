@@ -274,7 +274,8 @@ function OverlayButton({
 function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void }) {
   const [value, setValue] = useState("");
   const [state, setState] = useState<"idle" | "wrong" | "ok">("idle");
-  const sentence = blankOut(card.example, card.word);
+  const sentence = blankOut(card.example, card.word, card.translation);
+
 
   function submit() {
     if (value.trim().toLowerCase() === card.word.trim().toLowerCase()) {
