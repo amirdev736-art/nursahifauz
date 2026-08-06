@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Camera, Layers, Target, User } from "lucide-react";
-import { NurProvider, useNur } from "@/lib/nur-context";
+import { NurProvider } from "@/lib/nur-context";
 import { Gate } from "@/components/nur/Gate";
 import { ScanTab } from "@/components/nur/ScanTab";
 import { CardsTab } from "@/components/nur/CardsTab";
