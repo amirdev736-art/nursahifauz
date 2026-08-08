@@ -64,7 +64,13 @@ export async function tgCall(method: string, body: Record<string, unknown>) {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const GEMINI_MODEL = "gemini-3.5-flash";
+const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"];
+
+/** Kalitni bir nechta env nomlaridan o'qiydi (handler ichida chaqirilishi shart). */
+function geminiKey(): string {
+  const env = process.env as Record<string, string | undefined>;
+  return (env["GEMINI_API_KEY"] ?? env["VITE_GEMINI_API_KEY"] ?? "").trim();
+}
 
 type ChatPart =
   | { type: "text"; text: string }
