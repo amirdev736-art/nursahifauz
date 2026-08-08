@@ -171,7 +171,7 @@ export async function aiChat(
   model = "openai/gpt-5.6-sol",
 ): Promise<string> {
   // Asosiy yo'l: foydalanuvchining Gemini kaliti. Xato bo'lsa Lovable AI'ga o'tadi.
-  if ((process.env.GEMINI_API_KEY ?? "").trim()) {
+  if (geminiKey()) {
     try {
       return await geminiChat(messages);
     } catch (e) {
