@@ -32,19 +32,6 @@ export function CardsTab() {
   );
   const locked = isChallenge;
 
-  // Pick a REAL scanned word from the user's DB cards for the retrieval challenge.
-  // Prefer cards that already have a contextual example sentence.
-  const challengeCard = useMemo(() => {
-    if (!current) return null;
-    const pool = list.filter((c) => c.example && c.example.trim().length > 0);
-    const source = pool.length ? pool : list;
-    if (!source.length) return current;
-    // Deterministic per-slide pick so the card doesn't reshuffle on re-render.
-    const seed = hashString(current.id);
-    return source[seed % source.length] ?? current;
-  }, [current, list]);
-
-
   const go = useCallback(
     (dir: 1 | -1) => {
       setIdx((i) => {
@@ -183,19 +170,19 @@ export function CardsTab() {
               )}
               style={{ transform: `translate3d(0, calc(${offset}% + ${drag}px), 0)` }}
             >
-              {challengeHere && challengeCard ? (
+              {challengeHere ? (
                 <ChallengeCard
-                  key={challengeCard.id}
-                  card={challengeCard}
-
+                  key={c.id}
+                  card={c}
                   onSolved={async () => {
-                    setSolved((s) => ({ ...s, [c.id]: true }));
-                    haptic("success");
-                    // reinforce SRS retention for the real scanned word
-                    await reviewCard({
-                      data: { initData, id: challengeCard.id, correct: true },
+                    const reviewed = await reviewCard({
+                      data: { initData, id: c.id, correct: true },
                     });
-                    refreshCards();
+                    setList((items) =>
+                      items.map((item) => (item.id === reviewed.id ? reviewed : item)),
+                    );
+                    setSolved((state) => ({ ...state, [c.id]: true }));
+                    haptic("success");
                   }}
                 />
               ) : (
@@ -273,16 +260,23 @@ function OverlayButton({
   );
 }
 
-function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void }) {
+function ChallengeCard({
+  card,
+  onSolved,
+}: {
+  card: CardRow;
+  onSolved: () => Promise<void>;
+}) {
   const [value, setValue] = useState("");
   const [state, setState] = useState<"idle" | "wrong" | "ok">("idle");
   const sentence = blankOut(card.example, card.word, card.translation);
 
-
-  function submit() {
-    if (value.trim().toLowerCase() === card.word.trim().toLowerCase()) {
+  async function submit() {
+    if (state === "ok") return;
+    if (value.trim().toLocaleLowerCase("en-US") === card.word.trim().toLocaleLowerCase("en-US")) {
       setState("ok");
-      setTimeout(onSolved, 500);
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+      await onSolved();
     } else {
       setState("wrong");
       haptic("error");
@@ -310,12 +304,14 @@ function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void
             setValue(e.target.value);
             setState("idle");
           }}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void submit();
+          }}
           className="h-12 flex-1 rounded-2xl border border-white/12 bg-white/8 px-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent/60"
         />
         <button
           aria-label="submit"
-          onClick={submit}
+          onClick={() => void submit()}
           className="grad-cool grid h-12 w-12 shrink-0 place-items-center rounded-full shadow-[var(--glow-blue)] transition-transform active:scale-90"
         >
           {state === "ok" ? (
@@ -327,12 +323,6 @@ function ChallengeCard({ card, onSolved }: { card: CardRow; onSolved: () => void
       </div>
     </div>
   );
-}
-
-function hashString(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
 }
 
 function blankOut(example: string | null, word: string, translation: string) {
