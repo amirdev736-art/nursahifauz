@@ -64,12 +64,111 @@ export async function tgCall(method: string, body: Record<string, unknown>) {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+const GEMINI_MODEL = "gemini-3.5-flash";
+
+type ChatPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+type ChatMsg = { role: string; content: string | ChatPart[] };
+
+/** OpenAI uslubidagi xabarlarni Gemini `contents` formatiga o'giradi. */
+function toGeminiBody(messages: unknown[]) {
+  const msgs = messages as ChatMsg[];
+  const systemTexts: string[] = [];
+  const contents: { role: string; parts: Record<string, unknown>[] }[] = [];
+
+  for (const m of msgs) {
+    const parts: Record<string, unknown>[] = [];
+    if (typeof m.content === "string") {
+      if (m.content.trim()) parts.push({ text: m.content });
+    } else {
+      for (const p of m.content ?? []) {
+        if (p.type === "text") {
+          parts.push({ text: p.text });
+        } else if (p.type === "image_url") {
+          const url = p.image_url.url;
+          const match = /^data:([^;]+);base64,(.*)$/s.exec(url);
+          if (match) {
+            parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+          } else {
+            parts.push({ fileData: { fileUri: url } });
+          }
+        }
+      }
+    }
+    if (parts.length === 0) continue;
+    if (m.role === "system") {
+      systemTexts.push(parts.map((p) => String(p.text ?? "")).join("\n"));
+      continue;
+    }
+    contents.push({ role: m.role === "assistant" ? "model" : "user", parts });
+  }
+
+  return {
+    contents,
+    ...(systemTexts.length
+      ? { systemInstruction: { parts: [{ text: systemTexts.join("\n\n") }] } }
+      : {}),
+  };
+}
+
+/** To'g'ridan-to'g'ri Google Gemini API orqali chaqiruv (foydalanuvchi kaliti bilan). */
+async function geminiChat(messages: unknown[]): Promise<string> {
+  const key = (process.env.GEMINI_API_KEY ?? "").trim();
+  if (!key) throw new Error("NO_GEMINI_KEY");
+
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify(toGeminiBody(messages)),
+      },
+    );
+    const text = await res.text();
+
+    if (res.ok) {
+      const json = JSON.parse(text) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      return (json.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text ?? "")
+        .join("")
+        .trim();
+    }
+
+    if (res.status === 429 || res.status >= 500) {
+      lastErr = res.status === 429 ? "RATE_LIMIT" : `Gemini xatosi [${res.status}]`;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+        continue;
+      }
+    }
+    throw new Error(lastErr || `Gemini xatosi [${res.status}]: ${text.slice(0, 300)}`);
+  }
+  throw new Error(lastErr || "Gemini xatosi");
+}
+
 export async function aiChat(
   messages: unknown[],
   model = "openai/gpt-5.6-sol",
 ): Promise<string> {
+  // Asosiy yo'l: foydalanuvchining Gemini kaliti. Xato bo'lsa Lovable AI'ga o'tadi.
+  if ((process.env.GEMINI_API_KEY ?? "").trim()) {
+    try {
+      return await geminiChat(messages);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "RATE_LIMIT") throw e;
+      console.error("Gemini fallback:", msg);
+    }
+  }
+
   const key = (process.env.LOVABLE_API_KEY ?? "").trim();
   if (!key) throw new Error("AI sozlanmagan (LOVABLE_API_KEY yo'q)");
+
 
   let lastErr = "";
   for (let attempt = 0; attempt < 3; attempt++) {
